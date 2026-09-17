@@ -1,0 +1,164 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ProductCategory {
+  APP
+  WEB
+  LANDING_PAGE
+  WHATSAPP_BOT
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  FULFILLED
+  CANCELED
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  name         String?
+  passwordHash String
+  isAdmin      Boolean   @default(false)
+  refreshTokens RefreshToken[]
+  orders       Order[]
+  leads        Lead[]
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  emailVerifiedAt DateTime?
+  productKeys  ProductKey[]
+  abandonedCarts AbandonedCart[]
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model Product {
+  id          String          @id @default(cuid())
+  slug        String          @unique
+  name        String
+  tagline     String
+  description String
+  category    ProductCategory
+  priceCents  Int
+  currency    String          @default("USD")
+  demoUrl     String?
+  featured    Boolean         @default(false)
+  active      Boolean         @default(true)
+  versions    ProductVersion[]
+  orderItems  OrderItem[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  productKeys ProductKey[]
+}
+
+model ProductVersion {
+  id          String   @id @default(cuid())
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  version     String
+  releaseNotes String?
+  storageKey  String?
+  releasedAt  DateTime @default(now())
+  createdAt   DateTime @default(now())
+  @@unique([productId, version])
+}
+
+model Order {
+  id          String      @id @default(cuid())
+  reference   String      @unique
+  userId      String?
+  user        User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  status      OrderStatus @default(PENDING)
+  totalCents  Int
+  currency    String      @default("USD")
+  provider    String?
+  providerId  String?
+  items       OrderItem[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  productKeys ProductKey[]
+}
+
+model OrderItem {
+  id          String  @id @default(cuid())
+  orderId     String
+  order       Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId   String
+  product     Product @relation(fields: [productId], references: [id])
+  quantity    Int     @default(1)
+  unitCents   Int
+}
+
+model Lead {
+  id        String   @id @default(cuid())
+  email     String
+  whatsapp  String?
+  source    String   @default("homepage")
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+  @@index([email])
+}
+
+model ProductKey {
+  id         String   @id @default(cuid())
+  key        String   @unique
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id])
+  orderId    String
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  deliveredAt DateTime?
+  createdAt  DateTime @default(now())
+  @@index([userId])
+}
+
+model AbandonedCart {
+  id         String   @id @default(cuid())
+  email      String
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  itemsJson  String
+  totalCents Int
+  discountCode String?
+  recoveredAt DateTime?
+  createdAt  DateTime @default(now())
+  @@index([email])
+}
+
+model MarketingCampaign {
+  id          String   @id @default(cuid())
+  name        String
+  channel     String
+  status      String   @default("DRAFT")
+  audience    String
+  subject     String?
+  sentAt      DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ReleaseAnnouncement {
+  id          String   @id @default(cuid())
+  title       String
+  version     String
+  body        String
+  productId   String?
+  publishedAt DateTime?
+  createdAt   DateTime @default(now())
+}

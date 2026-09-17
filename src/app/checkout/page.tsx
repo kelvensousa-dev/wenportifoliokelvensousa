@@ -1,0 +1,63 @@
+'use client';
+
+import { ArrowLeft, ArrowRight, Check, ChevronLeft, CircleAlert, Copy, CreditCard, Home, LockKeyhole, QrCode, ShieldCheck, Trash2, WalletCards } from 'lucide-react';
+import Link from 'next/link';
+import { useState } from 'react';
+import PublicShell from '@/components/PublicShell';
+
+type PaymentMethod = 'card' | 'pix' | 'paypal';
+type CheckoutStep = 'payment' | 'verification' | 'success';
+
+const authorizationCode = '123456';
+const product = { name: 'Orbit CRM Pro', type: 'Licença comercial · 1 produto', price: 129, currency: 'US$' };
+const demoProductKey = 'KELV-ORBT-7Q9M-4X2P';
+
+const methods: Array<{ id: PaymentMethod; label: string; description: string; icon: typeof CreditCard }> = [
+  { id: 'card', label: 'Cartão internacional', description: 'Visa, Mastercard, Amex', icon: CreditCard },
+  { id: 'pix', label: 'Pix', description: 'Aprovação imediata no Brasil', icon: QrCode },
+  { id: 'paypal', label: 'PayPal', description: 'Pague com sua conta PayPal', icon: WalletCards }
+];
+
+export default function CheckoutPage() {
+  const [method, setMethod] = useState<PaymentMethod>('card');
+  const [step, setStep] = useState<CheckoutStep>('payment');
+  const [hasProduct, setHasProduct] = useState(true);
+  const [authorization, setAuthorization] = useState('');
+  const [accepted, setAccepted] = useState(false);
+  const [error, setError] = useState('');
+
+  function continueToVerification() {
+    setError('');
+    setStep('verification');
+  }
+
+  function verifyPayment() {
+    if (authorization !== authorizationCode) {
+      setError('Código de autorização inválido. Confira os 6 dígitos e tente novamente.');
+      return;
+    }
+
+    setError('');
+    setStep('success');
+  }
+
+  if (!hasProduct) {
+    return <PublicShell><div className="mx-auto flex min-h-[65vh] max-w-xl flex-col items-center justify-center px-6 text-center"><span className="flex h-16 w-16 items-center justify-center rounded-full bg-[#EDF2F7] text-[#718096]"><CreditCard size={27} /></span><h1 className="mt-6 font-display text-4xl font-bold tracking-[-.05em]">Seu carrinho está vazio.</h1><p className="mt-4 text-sm leading-6 text-[#718096]">Escolha uma solução no portfólio para iniciar uma compra.</p><Link href="/dashboard" className="mt-8 inline-flex items-center gap-2 rounded-full bg-[#1A202C] px-6 py-3 text-sm font-bold text-white"><ArrowLeft size={16} /> Voltar ao portfólio</Link></div></PublicShell>;
+  }
+
+  if (step === 'success') {
+    return <PublicShell><div className="mx-auto flex min-h-[65vh] max-w-xl flex-col items-center justify-center px-6 text-center"><span className="flex h-16 w-16 items-center justify-center rounded-full bg-[#E6FFFA] text-[#277C73]"><Check size={28} /></span><p className="mt-6 text-xs font-extrabold uppercase tracking-[0.2em] text-[#36A5B4]">Pagamento autorizado</p><h1 className="mt-3 font-display text-4xl font-bold tracking-[-.05em]">Pedido confirmado.</h1><p className="mt-4 text-sm leading-6 text-[#718096]">Sua licença foi reservada. O Product Key será enviado para o e-mail confirmado no cadastro após a confirmação do provedor.</p><div className="mt-6 w-full rounded-2xl border border-[#36B7C9]/20 bg-[#EFFFFF] p-5 text-left"><p className="text-xs font-extrabold uppercase tracking-[0.18em] text-[#1597A8]">Product Key · demo local</p><p className="mt-3 break-all font-mono text-lg font-bold tracking-wider text-[#1A202C]">{demoProductKey}</p><p className="mt-2 text-xs leading-5 text-[#4A5568]">Em produção, esta chave será gerada no webhook de pagamento e enviada por e-mail.</p></div><div className="mt-8 flex flex-wrap justify-center gap-3"><Link href="/dashboard" className="rounded-full bg-[#1A202C] px-6 py-3 text-sm font-bold text-white">Ir para meu espaço</Link><Link href="/" className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white px-6 py-3 text-sm font-bold"><Home size={16} /> Tela inicial</Link></div></div></PublicShell>;
+  }
+
+  return <PublicShell><div className="mx-auto max-w-6xl px-6 py-10 lg:px-8 lg:py-16"><div className="flex flex-wrap items-center justify-between gap-4"><Link href="/" className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white px-4 py-2.5 text-xs font-bold text-[#718096] transition hover:bg-[#1A202C] hover:text-white"><Home size={15} /> Tela inicial</Link><div className="flex items-center gap-3 text-xs font-bold text-[#A0AEC0]"><span className={step === 'payment' ? 'text-[#1597A8]' : ''}>01 Pagamento</span><span>•</span><span className={step === 'verification' ? 'text-[#1597A8]' : ''}>02 Verificação</span><span>•</span><span>03 Entrega</span></div></div><div className="mt-8 grid gap-8 lg:grid-cols-[1.15fr_.85fr]"><section><Link href="/dashboard" className="inline-flex items-center gap-2 text-xs font-bold text-[#718096] hover:text-[#1A202C]"><ChevronLeft size={15} /> Continuar comprando</Link><p className="mt-8 text-xs font-extrabold uppercase tracking-[0.2em] text-[#36A5B4]">{step === 'payment' ? 'Dados do pagamento' : 'Autorização segura'}</p><h1 className="mt-3 font-display text-4xl font-bold tracking-[-.05em]">{step === 'payment' ? 'Finalize sua compra.' : 'Confirme e autorize.'}</h1><p className="mt-4 text-sm leading-6 text-[#718096]">{step === 'payment' ? 'Escolha uma modalidade e informe os dados necessários para validar seu pagamento.' : 'Uma última verificação protege sua compra e libera a entrega digital.'}</p>{step === 'payment' ? <><div className="mt-8 grid gap-3">{methods.map(({ id, label, description, icon: Icon }) => <button key={id} onClick={() => setMethod(id)} className={`flex items-center gap-4 rounded-2xl border p-5 text-left transition ${method === id ? 'border-[#36B7C9] bg-[#EFFFFF] ring-4 ring-[#36B7C9]/10' : 'border-black/10 bg-white hover:border-black/20'}`}><span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white text-[#1597A8] shadow-sm"><Icon size={19} /></span><span className="flex-1"><strong className="block text-sm">{label}</strong><small className="mt-1 block text-xs text-[#718096]">{description}</small></span><span className={`h-4 w-4 rounded-full border-4 ${method === id ? 'border-[#36B7C9]' : 'border-[#CBD5E0]'}`} /></button>)}</div><PaymentDetails method={method} /><button onClick={continueToVerification} className="mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#1A202C] text-sm font-bold text-white transition hover:bg-[#2D3748]">Continuar para verificação <ArrowRight size={17} /></button></> : <VerificationPanel authorization={authorization} setAuthorization={(value) => { setAuthorization(value); setError(''); }} accepted={accepted} setAccepted={setAccepted} error={error} onBack={() => setStep('payment')} onVerify={verifyPayment} />}</section><aside className="h-fit rounded-3xl bg-[#1A202C] p-7 text-white shadow-glass"><div className="flex items-start justify-between gap-4"><div><p className="text-xs font-extrabold uppercase tracking-[0.2em] text-[#9AE6B4]">Seu pedido</p><h2 className="mt-4 font-display text-xl font-bold">{product.name}</h2><p className="mt-1 text-xs text-[#A0AEC0]">{product.type}</p></div><button aria-label="Excluir produto do carrinho" onClick={() => setHasProduct(false)} className="rounded-full p-2 text-[#A0AEC0] transition hover:bg-white/10 hover:text-white"><Trash2 size={17} /></button></div><div className="my-7 rounded-2xl border border-white/10 bg-white/5 p-4"><div className="flex items-center justify-between text-sm text-[#CBD5E0]"><span>Licença comercial</span><span>{product.currency} {product.price}</span></div><div className="mt-3 flex items-center justify-between text-sm text-[#CBD5E0]"><span>Entrega digital</span><span className="text-[#9AE6B4]">Incluída</span></div></div><div className="flex items-end justify-between border-t border-white/10 pt-5"><span className="text-sm text-[#CBD5E0]">Total</span><span className="font-display text-3xl font-bold">{product.currency} {product.price}</span></div><p className="mt-6 flex items-center gap-2 text-[11px] text-[#A0AEC0]"><ShieldCheck size={14} className="text-[#9AE6B4]" /> Pagamento protegido e entrega automática</p></aside></div></div></PublicShell>;
+}
+
+function PaymentDetails({ method }: { method: PaymentMethod }) {
+  if (method === 'pix') return <div className="mt-5 rounded-2xl border border-[#36B7C9]/20 bg-[#EFFFFF] p-5"><div className="flex gap-3"><QrCode className="text-[#1597A8]" size={22} /><div><p className="text-sm font-bold">Pix com confirmação imediata</p><p className="mt-1 text-xs leading-5 text-[#4A5568]">Ao continuar, geramos um QR Code e um código copia e cola válido por 30 minutos.</p><button type="button" className="mt-3 inline-flex items-center gap-2 text-xs font-bold text-[#1597A8]"><Copy size={14} /> Copiar código Pix</button></div></div></div>;
+  if (method === 'paypal') return <div className="mt-5 rounded-2xl border border-[#BEE3F8] bg-[#EBF8FF] p-5"><div className="flex gap-3"><WalletCards className="text-[#2B6CB0]" size={22} /><div><p className="text-sm font-bold text-[#2B6CB0]">Autorização PayPal</p><p className="mt-1 text-xs leading-5 text-[#2B6CB0]">Você será direcionado ao PayPal para autorizar a cobrança com segurança antes da confirmação.</p></div></div></div>;
+  return <div className="mt-5 grid gap-4 rounded-2xl border border-black/10 bg-white p-6 sm:grid-cols-2"><label className="sm:col-span-2"><span className="mb-2 block text-xs font-bold">Nome no cartão</span><input required placeholder="Como aparece no cartão" className="h-11 w-full rounded-xl border border-black/10 px-3 text-sm outline-none focus:border-[#36B7C9]" /></label><label className="sm:col-span-2"><span className="mb-2 block text-xs font-bold">Número do cartão</span><input required placeholder="0000 0000 0000 0000" className="h-11 w-full rounded-xl border border-black/10 px-3 text-sm outline-none focus:border-[#36B7C9]" /></label><label><span className="mb-2 block text-xs font-bold">Validade</span><input required placeholder="MM/AA" className="h-11 w-full rounded-xl border border-black/10 px-3 text-sm outline-none focus:border-[#36B7C9]" /></label><label><span className="mb-2 block text-xs font-bold">CVV</span><input required placeholder="000" className="h-11 w-full rounded-xl border border-black/10 px-3 text-sm outline-none focus:border-[#36B7C9]" /></label></div>;
+}
+
+function VerificationPanel({ authorization, setAuthorization, accepted, setAccepted, error, onBack, onVerify }: { authorization: string; setAuthorization: (value: string) => void; accepted: boolean; setAccepted: (value: boolean) => void; error: string; onBack: () => void; onVerify: () => void }) {
+  return <div className="mt-8"><div className="rounded-2xl border border-[#36B7C9]/20 bg-[#EFFFFF] p-5"><div className="flex gap-3"><ShieldCheck className="mt-0.5 shrink-0 text-[#1597A8]" size={21} /><div><p className="text-sm font-bold">Código de autorização do pagamento</p><p className="mt-1 text-xs leading-5 text-[#4A5568]">Digite o código de 6 dígitos enviado pelo provedor para autorizar esta compra.</p><p className="mt-2 text-xs font-bold text-[#1597A8]">Demo local: use 123456</p></div></div></div><label className="mt-6 block"><span className="mb-2 block text-xs font-bold">Código de segurança</span><input autoFocus inputMode="numeric" pattern="[0-9]{6}" maxLength={6} value={authorization} onChange={(event) => setAuthorization(event.target.value.replace(/\D/g, ''))} placeholder="000000" className={`h-16 w-full rounded-xl border bg-white text-center font-display text-3xl font-bold tracking-[.45em] outline-none focus:ring-4 focus:ring-[#36B7C9]/10 ${error ? 'border-red-400' : 'border-black/10 focus:border-[#36B7C9]'}`} /></label>{error && <p role="alert" className="mt-2 flex items-center gap-2 text-xs font-bold text-red-500"><CircleAlert size={14} /> {error}</p>}<label className="mt-5 flex items-start gap-2 text-xs leading-5 text-[#718096]"><input type="checkbox" checked={accepted} onChange={(event) => setAccepted(event.target.checked)} className="mt-1 h-4 w-4 accent-[#36B7C9]" /> Autorizo a cobrança e concordo com os termos de uso.</label><div className="mt-7 flex flex-col gap-3 sm:flex-row"><button onClick={onBack} className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-black/10 bg-white px-5 text-sm font-bold text-[#718096]"><ChevronLeft size={16} /> Voltar</button><button onClick={onVerify} disabled={authorization.length !== 6 || !accepted} className="flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-[#1A202C] text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-40">Autorizar pagamento <LockKeyhole size={16} /></button></div></div>;
+}
