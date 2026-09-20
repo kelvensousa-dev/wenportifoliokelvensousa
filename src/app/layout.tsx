@@ -3,14 +3,20 @@ import { LanguageProvider } from '@/components/LanguageContext';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Kelven Studio | Digital products with a point of view',
+  title: 'Mounday Tech | Digital products with a point of view',
   description: 'Software, automations and digital systems built to move ambitious teams forward.'
 };
+
+import Providers from '@/components/Providers';
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="pt-BR">
-      <body><LanguageProvider>{children}</LanguageProvider></body>
+      <body>
+        <Providers>
+          <LanguageProvider>{children}</LanguageProvider>
+        </Providers>
+      </body>
     </html>
   );
 }
