@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
 
 datasource db {
@@ -95,6 +96,9 @@ model Order {
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
   productKeys ProductKey[]
+  @@index([userId])
+  @@index([providerId])
+  @@index([status])
 }
 
 model OrderItem {
@@ -110,12 +114,16 @@ model OrderItem {
 model Lead {
   id        String   @id @default(cuid())
   email     String
+  name      String?
   whatsapp  String?
+  subject   String?
+  message   String?
   source    String   @default("homepage")
   userId    String?
   user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   createdAt DateTime @default(now())
   @@index([email])
+  @@index([createdAt])
 }
 
 model ProductKey {
@@ -130,6 +138,7 @@ model ProductKey {
   deliveredAt DateTime?
   createdAt  DateTime @default(now())
   @@index([userId])
+  @@index([orderId])
 }
 
 model AbandonedCart {

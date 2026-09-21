@@ -4,6 +4,7 @@ import { ArrowRight, Eye, EyeOff, LockKeyhole, Mail, ShieldCheck } from 'lucide-
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getSession, signIn } from 'next-auth/react';
 import { FormEvent, Suspense, useState } from 'react';
+import { safeInternalPath } from '@/lib/security';
 
 /**
  * Antes: o acesso administrativo era liberado por um literal '123456'
@@ -17,7 +18,8 @@ import { FormEvent, Suspense, useState } from 'react';
 function AdminLoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get('callbackUrl') ?? '/admin';
+  const requested = safeInternalPath(searchParams.get('callbackUrl'), '/admin');
+  const callbackUrl = requested === '/admin' || requested.startsWith('/admin/') ? requested : '/admin';
 
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -38,7 +40,7 @@ function AdminLoginForm() {
       });
 
       if (result?.error) {
-        setError('E-mail ou senha invalidos.');
+        setError('E-mail ou senha inválidos.');
         return;
       }
 
@@ -46,26 +48,26 @@ function AdminLoginForm() {
       // dentro de /admin e deixar o middleware devolve-lo em seguida.
       const session = await getSession();
       if (!session?.user?.isAdmin) {
-        setError('Esta conta nao tem permissao administrativa.');
+        setError('Esta conta não tem permissão administrativa.');
         return;
       }
 
-      router.replace((callbackUrl.startsWith('/admin') ? callbackUrl : '/admin') as any);
+      router.replace(callbackUrl);
       router.refresh();
     } catch {
-      setError('Nao foi possivel concluir o acesso. Tente novamente.');
+      setError('Não foi possível concluir o acesso. Tente novamente.');
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="w-full max-w-md rounded-3xl border border-black/5 bg-white p-8 shadow-glass md:p-10">
+    <div className="w-full max-w-md rounded-3xl border border-black/5 bg-white p-6 shadow-glass sm:p-8 md:p-10">
       <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#1A202C] text-white">
         <LockKeyhole size={21} />
       </div>
 
-      <p className="mt-8 text-xs font-extrabold uppercase tracking-[0.2em] text-[#36A5B4]">Area restrita</p>
+      <p className="mt-8 text-xs font-extrabold uppercase tracking-[0.2em] text-[#36A5B4]">Área restrita</p>
       <h1 className="mt-3 font-display text-4xl font-bold tracking-[-.05em]">Admin access.</h1>
       <p className="mt-4 text-sm leading-6 text-[#718096]">
         Acesso exclusivo para gestores. Entre com suas credenciais administrativas.
@@ -126,7 +128,7 @@ function AdminLoginForm() {
       </form>
 
       <p className="mt-6 flex items-center gap-2 text-xs text-[#718096]">
-        <ShieldCheck size={15} className="text-[#36B7C9]" /> Tentativas de acesso sao registradas.
+        <ShieldCheck size={15} className="text-[#36B7C9]" /> Tentativas repetidas são bloqueadas temporariamente.
       </p>
     </div>
   );
@@ -134,7 +136,7 @@ function AdminLoginForm() {
 
 export default function AdminLoginPage() {
   return (
-    <main className="grid min-h-screen place-items-center bg-[#F8F9FA] px-6">
+    <main className="grid min-h-screen place-items-center bg-[#F8F9FA] px-4 py-10 sm:px-6">
       <Suspense fallback={<div className="text-sm font-semibold text-[#718096]">Carregando...</div>}>
         <AdminLoginForm />
       </Suspense>

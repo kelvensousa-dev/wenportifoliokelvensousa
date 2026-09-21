@@ -1,0 +1,16 @@
+# Nunca copie segredos ou artefatos locais para dentro da imagem.
+.env
+.env.*
+!.env.example
+node_modules
+.next
+.git
+.gitignore
+*.log
+coverage
+infra/nginx/certs
+Dockerfile
+docker-compose.yml
+README.md
+docs
+infra/nginx/letsencrypt

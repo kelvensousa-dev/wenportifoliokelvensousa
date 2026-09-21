@@ -1,18 +1,48 @@
+# Uso em producao:
+#   1. cp .env.example .env  e preencha TODOS os valores
+#   2. docker compose build
+#   3. docker compose up -d
+# Detalhes em DEPLOY.md.
+
+x-public-build-args: &public-build-args
+  NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:?defina NEXT_PUBLIC_APP_URL no .env}
+  NEXT_PUBLIC_CONTACT_EMAIL: ${NEXT_PUBLIC_CONTACT_EMAIL:-}
+  NEXT_PUBLIC_WHATSAPP_NUMBER: ${NEXT_PUBLIC_WHATSAPP_NUMBER:-}
+  NEXT_PUBLIC_LINKEDIN_URL: ${NEXT_PUBLIC_LINKEDIN_URL:-}
+  NEXT_PUBLIC_INSTAGRAM_URL: ${NEXT_PUBLIC_INSTAGRAM_URL:-}
+
 services:
-  app:
+  # Aplica migracoes e sincroniza o catalogo; termina e sai.
+  migrate:
     build:
       context: .
       dockerfile: Dockerfile
+      target: migrator
+      args: *public-build-args
     env_file: .env
     depends_on:
       postgres:
         condition: service_healthy
+    restart: "no"
+    networks: [platform]
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runner
+      args: *public-build-args
+    env_file: .env
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
       redis:
         condition: service_healthy
-      minio:
-        condition: service_started
     restart: unless-stopped
     networks: [platform]
+    # Sem "ports": a aplicacao so e acessivel pelo Nginx.
 
   postgres:
     image: postgres:16-alpine
@@ -20,10 +50,11 @@ services:
       POSTGRES_DB: platform
       POSTGRES_USER: platform
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
-    # Porta comentada: o banco so precisa ser alcancavel pela rede interna.
-    # Descomente apenas se for conectar o Prisma Studio a partir do host.
-    ports:
-      - "5433:5432"
+    # SEGURANCA: a versao anterior publicava "5433:5432" — o banco ficava
+    # exposto para a internet inteira. Se precisar acessar do servidor
+    # (ex.: Prisma Studio), use apenas a interface local:
+    # ports:
+    #   - "127.0.0.1:5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -41,12 +72,8 @@ services:
       REDIS_PASSWORD: ${REDIS_PASSWORD}
     volumes:
       - redis_data:/data
-    # O healthcheck anterior era `redis-cli ping` sem autenticacao. Como o
-    # servidor sobe com --requirepass, o comando devolvia NOAUTH, o container
-    # nunca ficava "healthy" e o servico `app` (que depende de
-    # service_healthy) jamais iniciava.
     healthcheck:
-      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" ping | grep -q PONG"]
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" --no-auth-warning ping | grep -q PONG"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -54,11 +81,16 @@ services:
     networks: [platform]
 
   minio:
+    # Armazenamento de arquivos para o futuro modulo de releases. O codigo
+    # atual ainda nao usa S3, entao o servico so sobe com:
+    #   docker compose --profile storage up -d
+    # Recomendado: fixar uma tag RELEASE.* especifica em vez de "latest".
+    profiles: ["storage"]
     image: quay.io/minio/minio:latest
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: ${S3_ACCESS_KEY:-minioadmin}
-      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:?defina S3_SECRET_KEY no .env}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-troque-esta-senha-minio}
     volumes:
       - minio_data:/data
     restart: unless-stopped
@@ -70,16 +102,27 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      # Primeiro deploy sem certificado: NGINX_CONF=nginx.http-only.conf no .env
+      - ./infra/nginx/${NGINX_CONF:-nginx.conf}:/etc/nginx/nginx.conf:ro
       - ./infra/nginx/certs:/etc/nginx/certs:ro
+      - certbot_www:/var/www/certbot:ro
     depends_on: [app]
     restart: unless-stopped
     networks: [platform]
+
+  # Emissao/renovacao do certificado Let's Encrypt (sob demanda, ver DEPLOY.md).
+  certbot:
+    profiles: ["certbot"]
+    image: certbot/certbot
+    volumes:
+      - certbot_www:/var/www/certbot
+      - ./infra/nginx/letsencrypt:/etc/letsencrypt
 
 volumes:
   postgres_data:
   redis_data:
   minio_data:
+  certbot_www:
 
 networks:
   platform:

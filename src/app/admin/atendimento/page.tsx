@@ -1,14 +1,21 @@
-'use client';
-
-import { Bot, MessageCircle, Send, Sparkles, UserRound } from 'lucide-react';
-import { useState } from 'react';
+import AdminPlaceholder from '@/components/AdminPlaceholder';
 import AdminShell from '@/components/AdminShell';
+import { requireAdmin } from '@/lib/require-admin';
 
-const initialMessages = [{ from: 'ai', text: 'Olá. Sou o assistente do Kelven Studio. Como posso ajudar?' }];
-
-export default function SupportPage() {
-  const [messages, setMessages] = useState(initialMessages);
-  const [input, setInput] = useState('');
-  function send() { if (!input.trim()) return; const question = input.trim(); setMessages((items) => [...items, { from: 'user', text: question }, { from: 'ai', text: 'Entendi. Vou consultar a base de produtos e encaminhar essa conversa para o time quando necessário.' }]); setInput(''); }
-  return <AdminShell><div className="mx-auto max-w-7xl"><div><p className="text-xs font-extrabold uppercase tracking-[0.2em] text-[#36A5B4]">Support hub</p><h1 className="mt-2 font-display text-4xl font-bold tracking-[-.05em]">IA & WhatsApp.</h1><p className="mt-3 text-sm text-[#718096]">Monitore o agente, revise conversas e encaminhe atendimentos humanos.</p></div><div className="mt-8 grid gap-6 lg:grid-cols-[1.1fr_.9fr]"><section className="overflow-hidden rounded-3xl border border-black/5 bg-white shadow-sm"><header className="flex items-center justify-between border-b border-black/5 p-5"><div className="flex items-center gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#EFFFFF] text-[#1597A8]"><Bot size={19} /></span><div><p className="text-sm font-bold">Kelven AI Concierge</p><p className="mt-1 text-xs text-[#38A169]">● Online · base atualizada</p></div></div><button className="inline-flex items-center gap-2 rounded-full bg-[#E6FFFA] px-3 py-2 text-xs font-bold text-[#277C73]"><MessageCircle size={14} /> WhatsApp conectado</button></header><div className="min-h-80 space-y-4 p-5">{messages.map((message, index) => <div key={`${message.from}-${index}`} className={`flex gap-3 ${message.from === 'user' ? 'justify-end' : ''}`}><span className={`flex h-8 w-8 items-center justify-center rounded-full ${message.from === 'user' ? 'bg-[#1A202C] text-white' : 'bg-[#EFFFFF] text-[#1597A8]'}`}>{message.from === 'user' ? <UserRound size={15} /> : <Sparkles size={15} />}</span><p className={`max-w-md rounded-2xl px-4 py-3 text-sm leading-6 ${message.from === 'user' ? 'bg-[#1A202C] text-white' : 'bg-[#F8F9FA] text-[#4A5568]'}`}>{message.text}</p></div>)}</div><div className="flex gap-2 border-t border-black/5 p-4"><input value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={(event) => event.key === 'Enter' && send()} placeholder="Escreva uma mensagem..." className="h-11 flex-1 rounded-full border border-black/10 px-4 text-sm outline-none focus:border-[#36B7C9]" /><button onClick={send} aria-label="Enviar mensagem" className="flex h-11 w-11 items-center justify-center rounded-full bg-[#1A202C] text-white"><Send size={16} /></button></div></section><aside className="space-y-5"><article className="rounded-3xl bg-[#1A202C] p-7 text-white"><p className="text-xs font-extrabold uppercase tracking-[0.18em] text-[#9AE6B4]">Canais</p><h2 className="mt-4 font-display text-2xl font-bold">Atendimento humano</h2><p className="mt-3 text-sm leading-6 text-[#CBD5E0]">Conecte WhatsApp Business, e-mail e filas internas para assumir conversas que precisam de contexto.</p><button className="mt-7 rounded-full bg-[#9AE6B4] px-4 py-2.5 text-xs font-bold text-[#1A202C]">Configurar canais</button></article><article className="rounded-3xl border border-black/5 bg-white p-6"><p className="text-xs font-extrabold uppercase tracking-[0.18em] text-[#A0AEC0]">Hoje</p><div className="mt-5 grid gap-4 text-sm"><div className="flex justify-between"><span className="text-[#718096]">Conversas IA</span><strong>184</strong></div><div className="flex justify-between"><span className="text-[#718096]">Encaminhadas</span><strong>22</strong></div><div className="flex justify-between"><span className="text-[#718096]">SLA médio</span><strong>3m 42s</strong></div></div></article></aside></div></div></AdminShell>;
+export default async function SupportPage() {
+  await requireAdmin();
+  return (
+    <AdminShell>
+      <AdminPlaceholder
+        eyebrow="Support hub"
+        title="IA & WhatsApp."
+        description="Atendimento automatizado e encaminhamento para humanos."
+        nextSteps={[
+          'Conectar a API oficial do WhatsApp Business (Meta Cloud API).',
+          'Integrar um modelo de IA com base de conhecimento dos produtos.',
+          'Enquanto isso, os contatos do site ficam em "Leads & campanhas".'
+        ]}
+      />
+    </AdminShell>
+  );
 }

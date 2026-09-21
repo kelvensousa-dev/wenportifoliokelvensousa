@@ -11,16 +11,24 @@
 }
 
 * { box-sizing: border-box; }
-html { scroll-behavior: smooth; }
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
 body {
   margin: 0;
   background: var(--canvas);
   color: var(--ink);
-  font-family: 'Manrope', 'Avenir Next', 'Segoe UI', sans-serif;
+  overflow-x: hidden;
 }
-button, input { font: inherit; }
+button, input, select, textarea { font: inherit; }
 button { cursor: pointer; }
 ::selection { background: #b9eef3; color: var(--ink); }
+
+/* Foco visivel para quem navega por teclado (acessibilidade). */
+:focus-visible { outline: 2px solid var(--aqua); outline-offset: 2px; }
+
+/* Evita zoom automatico do iOS ao focar campos com fonte < 16px. */
+@media (max-width: 640px) {
+  input, select, textarea { font-size: 16px !important; }
+}
 
 .grid-paper {
   background-image: linear-gradient(rgba(26, 32, 44, 0.045) 1px, transparent 1px), linear-gradient(90deg, rgba(26, 32, 44, 0.045) 1px, transparent 1px);
@@ -31,3 +39,16 @@ button { cursor: pointer; }
 
 @keyframes drift { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(0, -12px, 0); } }
 .animate-drift { animation: drift 6s ease-in-out infinite alternate; }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .animate-drift { animation: none; }
+}
+
+/*
+ * As paginas legais usavam a classe `prose` sem o plugin
+ * @tailwindcss/typography instalado: os titulos ficavam do mesmo tamanho do
+ * texto. Estilo minimo equivalente, sem nova dependencia.
+ */
+.prose h2 { margin-top: 2.25rem; margin-bottom: 0.75rem; font-family: var(--font-space-grotesk), system-ui, sans-serif; font-size: 1.25rem; font-weight: 700; color: var(--ink); }
+.prose p { margin-top: 0; margin-bottom: 1rem; }

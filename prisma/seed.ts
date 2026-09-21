@@ -1,116 +1,73 @@
-import { PrismaClient, ProductCategory } from "@prisma/client";
-import * as bcrypt from "bcryptjs";
+import { PrismaClient, ProductCategory } from '@prisma/client';
+import * as bcrypt from 'bcryptjs';
+import { catalog } from '../src/lib/products';
 
 const prisma = new PrismaClient();
 
+/**
+ * Sincroniza o banco com o catalogo unico (src/lib/products.ts).
+ *
+ * Correcoes:
+ * - `update: {}` impedia que mudancas de preco/nome chegassem ao banco.
+ *   Agora o seed atualiza os dados a cada execucao.
+ * - Produtos que sairam do catalogo sao desativados (nao apagados, para
+ *   preservar o historico de pedidos).
+ */
 async function main() {
-  console.log("Start seeding products...");
+  console.log('Sincronizando catalogo...');
 
-  // Products from lib/products.ts
-  const productsToSeed: Array<{
-    id: string;
-    slug: string;
-    name: string;
-    category: ProductCategory;
-    tagline: string;
-    description: string;
-    priceCents: number;
-    currency: string;
-  }> = [
-      {
-        id: "orbit-crm",
-        slug: "orbit-crm",
-        name: "Orbit CRM",
-        category: ProductCategory.APP,
-        tagline: "Operação comercial clara",
-        description: "Operação comercial clara para times que precisam crescer sem perder contexto.",
-        priceCents: 12900,
-        currency: "USD",
-      },
-      {
-        id: "atlas-store",
-        slug: "atlas-store",
-        name: "Atlas Storefront",
-        category: ProductCategory.WEB,
-        tagline: "Transforme tráfego em vendas",
-        description: "Uma base veloz e elegante para transformar tráfego em vendas recorrentes.",
-        priceCents: 24900,
-        currency: "USD",
-      },
-      {
-        id: "signal-launch",
-        slug: "signal-launch",
-        name: "Signal Launch",
-        category: ProductCategory.LANDING_PAGE,
-        tagline: "Landing page de alta conversão",
-        description: "Landing page de alta conversão com narrativa modular e CMS pronto.",
-        priceCents: 8900,
-        currency: "USD",
-      },
-      {
-        id: "flow-bot",
-        slug: "flow-bot",
-        name: "Flow Bot",
-        category: ProductCategory.WHATSAPP_BOT,
-        tagline: "Automação conversacional",
-        description: "Automação conversacional para captar, qualificar e encaminhar oportunidades.",
-        priceCents: 17900,
-        currency: "USD",
-      },
-    ];
-
-  for (const p of productsToSeed) {
+  for (const item of catalog) {
+    const data = {
+      name: item.name,
+      category: item.dbCategory as ProductCategory,
+      tagline: item.tagline,
+      description: item.summary,
+      priceCents: item.priceCents,
+      currency: item.currency,
+      featured: Boolean(item.bestSeller),
+      active: true
+    };
     const product = await prisma.product.upsert({
-      where: { slug: p.slug },
-      update: {},
-      create: {
-        id: p.id,
-        slug: p.slug,
-        name: p.name,
-        category: p.category,
-        tagline: p.tagline,
-        description: p.description,
-        priceCents: p.priceCents,
-        currency: p.currency,
-      },
+      where: { slug: item.slug },
+      update: data,
+      create: { id: item.slug, slug: item.slug, ...data }
     });
-    console.log(`Created product: ${product.name}`);
+    console.log(`  ok: ${product.name} (${product.priceCents / 100} ${product.currency})`);
   }
 
-  // O seed anterior criava admin@empresa.com com a senha "123456" e essas
-  // credenciais eram impressas na tela de login. Agora as duas informacoes
-  // vem do ambiente e o seed falha em vez de criar uma porta fraca.
-  const adminEmail = process.env.SEED_ADMIN_EMAIL;
+  const { count } = await prisma.product.updateMany({
+    where: { slug: { notIn: catalog.map((item) => item.slug) }, active: true },
+    data: { active: false }
+  });
+  if (count) console.log(`  ${count} produto(s) fora do catalogo foram desativados.`);
+
+  // Admin: credenciais apenas via ambiente, nunca fixas no codigo.
+  const adminEmail = process.env.SEED_ADMIN_EMAIL?.trim().toLowerCase();
   const adminPassword = process.env.SEED_ADMIN_PASSWORD;
 
   if (!adminEmail || !adminPassword) {
-    console.log("SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD ausentes: nenhum admin criado.");
+    console.log('SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD ausentes: nenhum admin criado.');
   } else if (adminPassword.length < 12) {
-    throw new Error("SEED_ADMIN_PASSWORD precisa ter ao menos 12 caracteres.");
+    throw new Error('SEED_ADMIN_PASSWORD precisa ter ao menos 12 caracteres.');
   } else {
     const hash = await bcrypt.hash(adminPassword, 12);
     const admin = await prisma.user.upsert({
-      where: { email: adminEmail.toLowerCase() },
+      where: { email: adminEmail },
       update: { passwordHash: hash, isAdmin: true },
-      create: {
-        email: adminEmail.toLowerCase(),
-        name: "Administrador",
-        passwordHash: hash,
-        isAdmin: true,
-      },
+      create: { email: adminEmail, name: 'Administrador', passwordHash: hash, isAdmin: true }
     });
     console.log(`Admin pronto: ${admin.email}`);
   }
 
-  console.log("Seeding finished.");
+  console.log('Seed concluido.');
 }
 
 main()
   .then(async () => {
     await prisma.$disconnect();
   })
-  .catch(async (e) => {
-    console.error(e);
+  .catch(async (error) => {
+    console.error(error);
     await prisma.$disconnect();
     process.exit(1);
   });

@@ -1,19 +1,81 @@
-'use client';
-
-import { ArrowDownToLine, ArrowUpRight, CreditCard, Download, Filter, Receipt, Wallet } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
-import { useState } from 'react';
 import AdminShell from '@/components/AdminShell';
+import { prisma } from '@/lib/prisma';
+import { requireAdmin } from '@/lib/require-admin';
+import { formatPrice } from '@/lib/products';
 
-const sales = [
-  ['#KS-1048', 'Orbit CRM Pro', 'ana@empresa.com', 'US$ 129', 'Stripe', 'Pago'],
-  ['#KS-1047', 'Atlas ERP Cloud', 'joao@grupo.io', 'US$ 299', 'Pix', 'Pago'],
-  ['#KS-1046', 'Flow Bot', 'maria@studio.co', 'US$ 179', 'PayPal', 'Pago'],
-  ['#KS-1045', 'Signal Engine', 'leo@commerce.com', 'US$ 149', 'Stripe', 'Pago']
-];
+export const dynamic = 'force-dynamic';
 
-export default function BillingPage() {
-  const [period, setPeriod] = useState('Últimos 30 dias');
-  const financeMetrics: Array<[string, string, string, LucideIcon]> = [['Receita bruta', 'US$ 92.840', '+28,4%', Wallet], ['Taxas e descontos', 'US$ 8.550', '9,2% da receita', CreditCard], ['Receita líquida', 'US$ 84.290', '+24,8%', Receipt]];
-  return <AdminShell><div className="mx-auto max-w-7xl"><div className="flex flex-col justify-between gap-5 md:flex-row md:items-end"><div><p className="text-xs font-extrabold uppercase tracking-[0.2em] text-[#36A5B4]">Financeiro & BI</p><h1 className="mt-2 font-display text-4xl font-bold tracking-[-.05em]">Faturamento completo.</h1><p className="mt-3 text-sm text-[#718096]">Acompanhe vendas, ticket, canais e produtos que geram receita.</p></div><div className="flex gap-2"><select value={period} onChange={(event) => setPeriod(event.target.value)} className="rounded-full border border-black/10 bg-white px-4 py-2.5 text-xs font-bold"><option>Últimos 30 dias</option><option>Últimos 90 dias</option><option>Este ano</option></select><button className="inline-flex items-center gap-2 rounded-full bg-[#1A202C] px-4 py-2.5 text-xs font-bold text-white"><ArrowDownToLine size={15} /> Exportar</button></div></div><div className="mt-8 grid gap-4 md:grid-cols-3">{financeMetrics.map(([label, value, change, Icon]) => <article key={label} className="rounded-2xl border border-black/5 bg-white p-6 shadow-sm"><Icon size={19} className="text-[#36B7C9]" /><p className="mt-7 text-sm text-[#718096]">{label}</p><p className="mt-1 font-display text-3xl font-bold">{value}</p><p className="mt-2 text-xs font-bold text-[#38A169]">{change}</p></article>)}</div><section className="mt-6 rounded-3xl border border-black/5 bg-white p-6 shadow-sm"><div className="flex items-center justify-between"><div><p className="text-xs font-extrabold uppercase tracking-[0.18em] text-[#A0AEC0]">Produtos vendidos</p><h2 className="mt-2 font-display text-2xl font-bold">Receita por produto</h2></div><button className="inline-flex items-center gap-2 text-xs font-bold text-[#1597A8]"><Filter size={15} /> Filtrar</button></div><div className="mt-7 overflow-x-auto"><table className="w-full min-w-[680px] text-left text-sm"><thead className="border-b border-black/10 text-xs uppercase tracking-wider text-[#A0AEC0]"><tr><th className="pb-4">Referência</th><th className="pb-4">Produto</th><th className="pb-4">Cliente</th><th className="pb-4">Valor</th><th className="pb-4">Canal</th><th className="pb-4">Status</th></tr></thead><tbody>{sales.map(([reference, product, customer, value, channel, status]) => <tr key={reference} className="border-b border-black/5"><td className="py-4 font-mono text-xs">{reference}</td><td className="py-4 font-bold">{product}</td><td className="py-4 text-[#718096]">{customer}</td><td className="py-4 font-bold">{value}</td><td className="py-4 text-[#718096]">{channel}</td><td className="py-4"><span className="rounded-full bg-[#E6FFFA] px-3 py-1 text-xs font-bold text-[#277C73]">{status}</span></td></tr>)}</tbody></table></div></section><p className="mt-5 text-xs text-[#A0AEC0]">Compatível com exportação para Power BI via API/CSV. Os indicadores acima são demonstração local até conectar o provedor de dados.</p></div></AdminShell>;
+const statusStyle: Record<string, string> = {
+  PENDING: 'bg-[#FFFAF0] text-[#C05621]',
+  PAID: 'bg-[#E6FFFA] text-[#277C73]',
+  FULFILLED: 'bg-[#E6FFFA] text-[#277C73]',
+  CANCELED: 'bg-[#EDF2F7] text-[#718096]'
+};
+const statusText: Record<string, string> = { PENDING: 'Pendente', PAID: 'Pago', FULFILLED: 'Entregue', CANCELED: 'Cancelado' };
+
+export default async function BillingPage() {
+  await requireAdmin();
+
+  const orders = await prisma.order.findMany({
+    orderBy: { createdAt: 'desc' },
+    take: 100,
+    include: {
+      user: { select: { email: true } },
+      items: { include: { product: { select: { name: true } } } }
+    }
+  });
+
+  const paid = orders.filter((order) => order.status === 'PAID' || order.status === 'FULFILLED');
+  const paidTotal = paid.reduce((sum, order) => sum + order.totalCents, 0);
+
+  return (
+    <AdminShell>
+      <div className="mx-auto max-w-7xl">
+        <p className="text-xs font-extrabold uppercase tracking-[0.2em] text-[#36A5B4]">Financeiro</p>
+        <h1 className="mt-2 font-display text-3xl font-bold tracking-[-.05em] sm:text-4xl">Faturamento.</h1>
+        <p className="mt-3 text-sm text-[#718096]">Últimos 100 pedidos. Valores brutos, antes das taxas do Stripe.</p>
+
+        <div className="mt-8 grid gap-4 sm:grid-cols-3">
+          {[
+            ['Receita paga (lista)', formatPrice(paidTotal)],
+            ['Pedidos pagos (lista)', String(paid.length)],
+            ['Pedidos listados', String(orders.length)]
+          ].map(([label, value]) => (
+            <article key={label} className="rounded-2xl border border-black/5 bg-white p-6 shadow-sm">
+              <p className="text-sm text-[#718096]">{label}</p>
+              <p className="mt-1 font-display text-3xl font-bold" data-no-translate>{value}</p>
+            </article>
+          ))}
+        </div>
+
+        <section className="mt-6 rounded-3xl border border-black/5 bg-white p-5 shadow-sm sm:p-6">
+          <h2 className="font-display text-2xl font-bold">Pedidos</h2>
+          {orders.length === 0 ? (
+            <p className="mt-6 text-sm text-[#718096]">Nenhum pedido registrado ainda.</p>
+          ) : (
+            <div className="mt-6 overflow-x-auto">
+              <table className="w-full min-w-[720px] text-left text-sm">
+                <thead className="border-b border-black/10 text-xs uppercase tracking-wider text-[#A0AEC0]">
+                  <tr><th className="pb-4">Referência</th><th className="pb-4">Produto</th><th className="pb-4">Cliente</th><th className="pb-4">Valor</th><th className="pb-4">Data</th><th className="pb-4">Status</th></tr>
+                </thead>
+                <tbody>
+                  {orders.map((order) => (
+                    <tr key={order.id} className="border-b border-black/5">
+                      <td className="max-w-[180px] truncate py-4 font-mono text-xs" title={order.reference}>{order.reference}</td>
+                      <td className="py-4 font-bold">{order.items.map((item) => item.product.name).join(', ')}</td>
+                      <td className="py-4 text-[#718096]">{order.user?.email ?? '—'}</td>
+                      <td className="py-4 font-bold" data-no-translate>{formatPrice(order.totalCents, order.currency)}</td>
+                      <td className="py-4 text-[#718096]">{order.createdAt.toLocaleDateString('pt-BR')}</td>
+                      <td className="py-4"><span className={`rounded-full px-3 py-1 text-xs font-bold ${statusStyle[order.status] ?? ''}`}>{statusText[order.status] ?? order.status}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+        <p className="mt-5 text-xs text-[#A0AEC0]">Para relatórios completos (taxas, estornos, repasses), use o painel do Stripe.</p>
+      </div>
+    </AdminShell>
+  );
 }

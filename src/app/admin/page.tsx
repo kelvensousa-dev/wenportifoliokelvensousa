@@ -1,15 +1,87 @@
-import { ArrowUpRight, BarChart3, DollarSign, Mail, ShoppingCart, Users } from 'lucide-react';
+import { BarChart3, DollarSign, ShoppingCart, Users } from 'lucide-react';
 import AdminShell from '@/components/AdminShell';
+import { prisma } from '@/lib/prisma';
+import { requireAdmin } from '@/lib/require-admin';
+import { formatPrice } from '@/lib/products';
 
-const metrics = [
-  { label: 'Receita líquida', value: 'US$ 84.290', change: '+24,8%', icon: DollarSign },
-  { label: 'Pedidos pagos', value: '428', change: '+18,4%', icon: ShoppingCart },
-  { label: 'Leads capturados', value: '1.284', change: '+32,1%', icon: Users },
-  { label: 'Ticket médio', value: 'US$ 196', change: '+8,7%', icon: BarChart3 }
-];
+export const dynamic = 'force-dynamic';
 
-const bars = [42, 58, 48, 70, 64, 82, 74, 96, 88, 108, 98, 124];
+const MONTHS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 
-export default function AdminPage() {
-  return <AdminShell><div className="mx-auto max-w-7xl"><div className="flex flex-col justify-between gap-5 md:flex-row md:items-end"><div><p className="text-xs font-extrabold uppercase tracking-[0.2em] text-[#36A5B4]">Command center</p><h1 className="mt-2 font-display text-4xl font-bold tracking-[-.05em]">Visão geral do negócio.</h1><p className="mt-3 text-sm text-[#718096]">Faturamento, produtos e relacionamento em uma única leitura.</p></div><span className="rounded-full bg-[#E6FFFA] px-4 py-2 text-xs font-bold text-[#277C73]">Dados atualizados há 4 min</span></div><div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">{metrics.map(({ label, value, change, icon: Icon }) => <article key={label} className="rounded-2xl border border-black/5 bg-white p-5 shadow-sm"><div className="flex items-center justify-between"><p className="text-xs font-bold uppercase tracking-wider text-[#A0AEC0]">{label}</p><Icon size={18} className="text-[#36B7C9]" /></div><p className="mt-7 font-display text-3xl font-bold">{value}</p><p className="mt-2 text-xs font-bold text-[#38A169]">{change} no período</p></article>)}</div><div className="mt-6 grid gap-6 xl:grid-cols-[1.35fr_.65fr]"><section className="rounded-3xl border border-black/5 bg-white p-6 shadow-sm"><div className="flex items-center justify-between"><div><p className="text-xs font-extrabold uppercase tracking-[0.18em] text-[#A0AEC0]">Performance</p><h2 className="mt-2 font-display text-2xl font-bold">Receita por mês</h2></div><button className="inline-flex items-center gap-2 text-xs font-bold text-[#1597A8]">Exportar BI <ArrowUpRight size={15} /></button></div><div className="mt-8 flex h-56 items-end gap-2 border-b border-l border-black/10 px-4 pb-0">{bars.map((height, index) => <div key={index} className="group flex flex-1 flex-col items-center justify-end gap-2"><span className="w-full rounded-t-lg bg-[#36B7C9] transition group-hover:bg-[#1A202C]" style={{ height }} /><small className="-mb-6 text-[10px] text-[#A0AEC0]">{['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'][index]}</small></div>)}</div></section><section className="rounded-3xl bg-[#1A202C] p-7 text-white shadow-glass"><Mail size={20} className="text-[#9AE6B4]" /><h2 className="mt-8 font-display text-2xl font-bold">Marketing em movimento.</h2><p className="mt-3 text-sm leading-6 text-[#CBD5E0]">3 campanhas ativas e 214 clientes aguardando novidades.</p><div className="mt-8 h-2 rounded-full bg-white/10"><div className="h-2 w-[72%] rounded-full bg-[#9AE6B4]" /></div><p className="mt-3 text-xs text-[#A0AEC0]">72% da meta mensal</p></section></div></div></AdminShell>;
+/**
+ * Visao geral com dados REAIS do banco (antes: numeros fixos no codigo,
+ * como "US$ 84.290" e "428 pedidos", mostrados como se fossem reais).
+ */
+export default async function AdminPage() {
+  await requireAdmin();
+
+  const since = new Date();
+  since.setMonth(since.getMonth() - 11, 1);
+  since.setHours(0, 0, 0, 0);
+
+  const paidStatuses = ['PAID', 'FULFILLED'] as const;
+  const [revenue, paidCount, leadCount, userCount, paidOrders] = await Promise.all([
+    prisma.order.aggregate({ where: { status: { in: [...paidStatuses] } }, _sum: { totalCents: true } }),
+    prisma.order.count({ where: { status: { in: [...paidStatuses] } } }),
+    prisma.lead.count(),
+    prisma.user.count(),
+    prisma.order.findMany({ where: { status: { in: [...paidStatuses] }, createdAt: { gte: since } }, select: { totalCents: true, createdAt: true } })
+  ]);
+
+  const totalCents = revenue._sum.totalCents ?? 0;
+  const averageCents = paidCount ? Math.round(totalCents / paidCount) : 0;
+
+  const buckets = Array.from({ length: 12 }, (_, index) => {
+    const date = new Date(since);
+    date.setMonth(since.getMonth() + index);
+    return { key: `${date.getFullYear()}-${date.getMonth()}`, label: MONTHS[date.getMonth()], cents: 0 };
+  });
+  paidOrders.forEach((order) => {
+    const bucket = buckets.find((item) => item.key === `${order.createdAt.getFullYear()}-${order.createdAt.getMonth()}`);
+    if (bucket) bucket.cents += order.totalCents;
+  });
+  const maxCents = Math.max(1, ...buckets.map((bucket) => bucket.cents));
+
+  const metrics = [
+    { label: 'Receita (pedidos pagos)', value: formatPrice(totalCents), icon: DollarSign },
+    { label: 'Pedidos pagos', value: paidCount.toLocaleString('pt-BR'), icon: ShoppingCart },
+    { label: 'Leads capturados', value: leadCount.toLocaleString('pt-BR'), icon: Users },
+    { label: 'Ticket médio', value: formatPrice(averageCents), icon: BarChart3 }
+  ];
+
+  return (
+    <AdminShell>
+      <div className="mx-auto max-w-7xl">
+        <div className="flex flex-col justify-between gap-5 md:flex-row md:items-end">
+          <div>
+            <p className="text-xs font-extrabold uppercase tracking-[0.2em] text-[#36A5B4]">Command center</p>
+            <h1 className="mt-2 font-display text-3xl font-bold tracking-[-.05em] sm:text-4xl">Visão geral do negócio.</h1>
+            <p className="mt-3 text-sm text-[#718096]">{userCount.toLocaleString('pt-BR')} contas cadastradas · dados em tempo real do banco.</p>
+          </div>
+        </div>
+        <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {metrics.map(({ label, value, icon: Icon }) => (
+            <article key={label} className="rounded-2xl border border-black/5 bg-white p-5 shadow-sm">
+              <div className="flex items-center justify-between gap-2"><p className="text-xs font-bold uppercase tracking-wider text-[#A0AEC0]">{label}</p><Icon size={18} className="shrink-0 text-[#36B7C9]" /></div>
+              <p className="mt-7 break-words font-display text-2xl font-bold sm:text-3xl" data-no-translate>{value}</p>
+            </article>
+          ))}
+        </div>
+        <section className="mt-6 rounded-3xl border border-black/5 bg-white p-5 shadow-sm sm:p-6">
+          <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-[#A0AEC0]">Performance</p>
+          <h2 className="mt-2 font-display text-2xl font-bold">Receita por mês (12 meses)</h2>
+          <div className="mt-8 overflow-x-auto">
+            <div className="flex h-56 min-w-[520px] items-end gap-2 border-b border-l border-black/10 px-2 pb-0 sm:px-4">
+              {buckets.map((bucket) => (
+                <div key={bucket.key} className="group flex h-full flex-1 flex-col items-center justify-end gap-2" title={formatPrice(bucket.cents)}>
+                  <span className="w-full rounded-t-lg bg-[#36B7C9] transition group-hover:bg-[#1A202C]" style={{ height: `${Math.max(2, (bucket.cents / maxCents) * 100)}%` }} />
+                </div>
+              ))}
+            </div>
+            <div className="flex min-w-[520px] gap-2 px-2 pt-2 sm:px-4">{buckets.map((bucket) => <small key={bucket.key} className="flex-1 text-center text-[10px] text-[#A0AEC0]">{bucket.label}</small>)}</div>
+          </div>
+        </section>
+      </div>
+    </AdminShell>
+  );
 }

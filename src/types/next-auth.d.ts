@@ -2,8 +2,6 @@ import type { DefaultSession } from 'next-auth';
 
 /**
  * Augmentacao de tipos do NextAuth.
- * Sem este arquivo, `session.user.isAdmin` e `token.isAdmin` nao existem
- * para o TypeScript — era a origem dos `as any` espalhados pelo projeto.
  */
 declare module 'next-auth' {
   interface User {
@@ -23,5 +21,7 @@ declare module 'next-auth/jwt' {
   interface JWT {
     id: string;
     isAdmin: boolean;
+    /** Momento (ms) da ultima conferencia do privilegio no banco. */
+    checkedAt?: number;
   }
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
 export type SiteLanguage = 'pt-BR' | 'es' | 'en-US';
 
@@ -155,7 +155,7 @@ const pageTranslations: Record<string, Record<SiteLanguage, string>> = {
   , '3. Pagamentos e entrega': { 'pt-BR': '3. Pagamentos e entrega', es: '3. Pagos y entrega', 'en-US': '3. Payments and delivery' }
   , '4. Suporte e atualizações': { 'pt-BR': '4. Suporte e atualizações', es: '4. Soporte y actualizaciones', 'en-US': '4. Support and updates' }
   , '5. Responsabilidades': { 'pt-BR': '5. Responsabilidades', es: '5. Responsabilidades', 'en-US': '5. Responsibilities' }
-  , '6. Contato': { 'pt-BR': '6. Contato', es: '6. Contact', 'en-US': '6. Contact' }
+  , '6. Contato': { 'pt-BR': '6. Contato', es: '6. Contacto', 'en-US': '6. Contact' }
   , '1. Dados que coletamos': { 'pt-BR': '1. Dados que coletamos', es: '1. Datos que recopilamos', 'en-US': '1. Data we collect' }
   , '2. Como usamos seus dados': { 'pt-BR': '2. Como usamos seus dados', es: '2. Cómo usamos tus datos', 'en-US': '2. How we use your data' }
   , '3. Pagamentos': { 'pt-BR': '3. Pagamentos', es: '3. Pagos', 'en-US': '3. Payments' }
@@ -304,76 +304,157 @@ const pageTranslations: Record<string, Record<SiteLanguage, string>> = {
   , 'Support hub': { 'pt-BR': 'Central de suporte', es: 'Centro de soporte', 'en-US': 'Support hub' }
   , 'IA & WhatsApp.': { 'pt-BR': 'IA & WhatsApp.', es: 'IA y WhatsApp.', 'en-US': 'AI & WhatsApp.' }
   , 'Termos': { 'pt-BR': 'Termos', es: 'Términos', 'en-US': 'Terms' }
+  , 'Minhas compras': { 'pt-BR': 'Minhas compras', es: 'Mis compras', 'en-US': 'My purchases' }
+  , 'Pagar com segurança': { 'pt-BR': 'Pagar com segurança', es: 'Pagar con seguridad', 'en-US': 'Pay securely' }
+  , 'Comprar solução': { 'pt-BR': 'Comprar solução', es: 'Comprar solución', 'en-US': 'Buy solution' }
+  , 'Ver solução': { 'pt-BR': 'Ver solução', es: 'Ver solución', 'en-US': 'View solution' }
+  , 'Falar com especialista': { 'pt-BR': 'Falar com especialista', es: 'Hablar con especialista', 'en-US': 'Talk to a specialist' }
+  , 'Mais vendido': { 'pt-BR': 'Mais vendido', es: 'Más vendido', 'en-US': 'Best seller' }
+  , 'Em alta': { 'pt-BR': 'Em alta', es: 'En tendencia', 'en-US': 'Trending' }
+  , 'Menu': { 'pt-BR': 'Menu', es: 'Menú', 'en-US': 'Menu' }
+  , 'Enviar briefing': { 'pt-BR': 'Enviar briefing', es: 'Enviar briefing', 'en-US': 'Send brief' }
+  , 'Pedido recebido.': { 'pt-BR': 'Pedido recebido.', es: 'Solicitud recibida.', 'en-US': 'Request received.' }
+  , 'Pagamentos via Stripe · LGPD': { 'pt-BR': 'Pagamentos via Stripe · LGPD', es: 'Pagos vía Stripe · LGPD', 'en-US': 'Payments via Stripe · LGPD' }
 };
 
 const LanguageContext = createContext<LanguageContextValue | null>(null);
-const originalTextByNode = new WeakMap<Text, string>();
-const originalAttributesByElement = new WeakMap<Element, Map<string, string>>();
+
+/**
+ * Para cada no de texto guardamos o texto original (em PT) e o ultimo valor
+ * que NOS escrevemos. Se o React trocar o texto (ex.: botao muda de
+ * "Entrar na conta" para "Processando..."), o valor atual deixa de bater com
+ * o que escrevemos e o novo texto passa a ser a nova origem.
+ *
+ * A versao anterior guardava apenas o primeiro texto visto: depois de uma
+ * mudanca de estado, o tradutor sobrescrevia o texto novo do React com a
+ * traducao do texto ANTIGO (botoes com rotulo errado).
+ */
+type NodeMemory = { source: string; written: string };
+const textMemory = new WeakMap<Text, NodeMemory>();
+const attributeMemory = new WeakMap<Element, Map<string, NodeMemory>>();
+const TRANSLATABLE_ATTRIBUTES = ['placeholder', 'aria-label', 'title'] as const;
+const STORAGE_KEY = 'kelven-language';
+
+function isSiteLanguage(value: unknown): value is SiteLanguage {
+  return value === 'pt-BR' || value === 'es' || value === 'en-US';
+}
+
+function readStoredLanguage(): SiteLanguage | null {
+  try {
+    const saved = window.localStorage.getItem(STORAGE_KEY);
+    return isSiteLanguage(saved) ? saved : null;
+  } catch {
+    // Navegacao privada em alguns navegadores bloqueia o localStorage.
+    return null;
+  }
+}
 
 export function LanguageProvider({ children }: Readonly<{ children: React.ReactNode }>) {
   const [language, setLanguageState] = useState<SiteLanguage>('pt-BR');
 
   useEffect(() => {
-    const savedLanguage = window.localStorage.getItem('kelven-language') as SiteLanguage | null;
-    if (savedLanguage && savedLanguage in translations) setLanguageState(savedLanguage);
+    const saved = readStoredLanguage();
+    if (saved) {
+      setLanguageState(saved);
+      document.documentElement.lang = saved;
+    }
   }, []);
 
-  function setLanguage(nextLanguage: SiteLanguage) {
+  const setLanguage = useCallback((nextLanguage: SiteLanguage) => {
     setLanguageState(nextLanguage);
-    window.localStorage.setItem('kelven-language', nextLanguage);
+    try {
+      window.localStorage.setItem(STORAGE_KEY, nextLanguage);
+    } catch {
+      /* ignora: preferencia apenas nao sera lembrada */
+    }
     document.documentElement.lang = nextLanguage;
-  }
+  }, []);
 
   useEffect(() => {
     const lookup = new Map<string, Record<SiteLanguage, string>>();
     Object.entries(pageTranslations).forEach(([source, values]) => {
       lookup.set(source.trim(), values);
-      Object.values(values).forEach((value) => lookup.set(value.trim(), values));
+      Object.values(values).forEach((value) => {
+        if (!lookup.has(value.trim())) lookup.set(value.trim(), values);
+      });
     });
 
+    const translateText = (textNode: Text) => {
+      const current = textNode.nodeValue ?? '';
+      const trimmed = current.trim();
+      if (!trimmed) return;
+      const memory = textMemory.get(textNode);
+      const source = memory && memory.written === current ? memory.source : trimmed;
+      const translated = lookup.get(source)?.[language];
+      let next = current;
+      if (translated) {
+        const leading = current.match(/^\s*/)?.[0] ?? '';
+        const trailing = current.match(/\s*$/)?.[0] ?? '';
+        next = `${leading}${translated}${trailing}`;
+        if (next !== current) textNode.nodeValue = next;
+      }
+      textMemory.set(textNode, { source, written: next });
+    };
+
     const translatePage = () => {
-      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+        acceptNode: (node) => {
+          const parent = node.parentElement;
+          if (!parent) return NodeFilter.FILTER_REJECT;
+          // Nunca traduz conteudo digitado pelo usuario ou scripts.
+          if (parent.closest('script, style, textarea, [contenteditable="true"], [data-no-translate]')) return NodeFilter.FILTER_REJECT;
+          return NodeFilter.FILTER_ACCEPT;
+        }
+      });
       let node = walker.nextNode();
       while (node) {
-        const textNode = node as Text;
-        const currentValue = textNode.nodeValue?.trim();
-        if (currentValue) {
-          const source = originalTextByNode.get(textNode) ?? currentValue;
-          originalTextByNode.set(textNode, source);
-          const translated = lookup.get(source.trim())?.[language];
-          if (translated) {
-            const leading = textNode.nodeValue?.match(/^\s*/)?.[0] ?? '';
-            const trailing = textNode.nodeValue?.match(/\s*$/)?.[0] ?? '';
-            textNode.nodeValue = `${leading}${translated}${trailing}`;
-          }
-        }
+        translateText(node as Text);
         node = walker.nextNode();
       }
 
       document.querySelectorAll<HTMLElement>('[placeholder], [aria-label], [title]').forEach((element) => {
-        const attributes = originalAttributesByElement.get(element) ?? new Map<string, string>();
-        ['placeholder', 'aria-label', 'title'].forEach((attribute) => {
+        const memories = attributeMemory.get(element) ?? new Map<string, NodeMemory>();
+        TRANSLATABLE_ATTRIBUTES.forEach((attribute) => {
           const current = element.getAttribute(attribute);
           if (!current) return;
-          const source = attributes.get(attribute) ?? current;
-          attributes.set(attribute, source);
-          const translated = lookup.get(source.trim())?.[language];
-          if (translated) element.setAttribute(attribute, translated);
+          const memory = memories.get(attribute);
+          const source = memory && memory.written === current ? memory.source : current.trim();
+          const translated = lookup.get(source)?.[language];
+          const next = translated ?? current;
+          if (next !== current) element.setAttribute(attribute, next);
+          memories.set(attribute, { source, written: next });
         });
-        originalAttributesByElement.set(element, attributes);
+        attributeMemory.set(element, memories);
       });
     };
 
-    const frame = window.requestAnimationFrame(translatePage);
-    const observer = new MutationObserver(() => window.requestAnimationFrame(translatePage));
-    observer.observe(document.body, { childList: true, subtree: true });
+    let scheduled = 0;
+    const schedule = () => {
+      if (scheduled) return;
+      scheduled = window.requestAnimationFrame(() => {
+        scheduled = 0;
+        translatePage();
+      });
+    };
+
+    schedule();
+    // characterData: captura textos alterados pelo React sem trocar o no.
+    const observer = new MutationObserver(schedule);
+    observer.observe(document.body, { childList: true, subtree: true, characterData: true });
     return () => {
-      window.cancelAnimationFrame(frame);
+      if (scheduled) window.cancelAnimationFrame(scheduled);
       observer.disconnect();
     };
   }, [language]);
 
-  return <LanguageContext.Provider key={language} value={{ language, setLanguage, translate: (key) => translations[language][key] }}>{children}</LanguageContext.Provider>;
+  const value = useMemo<LanguageContextValue>(
+    () => ({ language, setLanguage, translate: (key) => translations[language][key] }),
+    [language, setLanguage]
+  );
+
+  // Removido `key={language}`: ele desmontava a aplicacao inteira a cada troca
+  // de idioma, apagando formularios preenchidos e o estado das telas.
+  return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
 }
 
 export function useLanguage() {

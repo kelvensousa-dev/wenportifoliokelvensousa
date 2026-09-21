@@ -1,0 +1,13 @@
+# SOMENTE para desenvolvimento local. Publica banco e Redis apenas em
+# 127.0.0.1 (nunca na internet). Uso:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d postgres redis
+# E no .env local:
+#   DATABASE_URL=postgresql://platform:SENHA@localhost:5433/platform?schema=public
+#   REDIS_URL=redis://:SENHA_REDIS@localhost:6379
+services:
+  postgres:
+    ports:
+      - "127.0.0.1:5433:5432"
+  redis:
+    ports:
+      - "127.0.0.1:6379:6379"

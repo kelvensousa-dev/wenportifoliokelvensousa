@@ -4,13 +4,24 @@ import GoogleProvider from 'next-auth/providers/google';
 import GitHubProvider from 'next-auth/providers/github';
 import { PrismaAdapter } from '@next-auth/prisma-adapter';
 import { prisma } from '@/lib/prisma';
+import { rateLimit } from '@/lib/rate-limit';
+import { clientIp } from '@/lib/security';
 import * as bcrypt from 'bcryptjs';
 
 /**
- * Providers OAuth sao registrados apenas quando as credenciais existem.
- * Antes, `clientId: process.env.X || ''` registrava um provider quebrado:
- * o botao "Continuar com Google" aparecia e devolvia erro de configuracao.
+ * Hash "falso" usado quando o e-mail nao existe. Sem ele, o login respondia
+ * instantaneamente para e-mails inexistentes e ~250 ms para e-mails
+ * cadastrados — a diferenca de tempo permitia descobrir quem tem conta.
  */
+let dummyHash: Promise<string> | null = null;
+function getDummyHash(): Promise<string> {
+  if (!dummyHash) dummyHash = bcrypt.hash('dummy-password-never-matches', 12);
+  return dummyHash;
+}
+
+/** Intervalo para revalidar o privilegio de admin no banco. */
+const ADMIN_RECHECK_MS = 5 * 60 * 1000;
+
 const providers: AuthOptions['providers'] = [
   CredentialsProvider({
     name: 'Credentials',
@@ -18,17 +29,26 @@ const providers: AuthOptions['providers'] = [
       email: { label: 'Email', type: 'email' },
       password: { label: 'Senha', type: 'password' }
     },
-    async authorize(credentials) {
-      if (!credentials?.email || !credentials?.password) return null;
+    async authorize(credentials, req) {
+      const email = credentials?.email?.toLowerCase().trim();
+      const password = credentials?.password;
+      if (!email || !password || email.length > 254 || password.length > 200) return null;
 
-      const user = await prisma.user.findUnique({
-        where: { email: credentials.email.toLowerCase().trim() }
-      });
+      // Protecao contra forca bruta: por IP e por conta.
+      const ip = clientIp(req?.headers as Record<string, string | undefined> | undefined);
+      const [byIp, byEmail] = await Promise.all([
+        rateLimit(`login:ip:${ip}`, 20, 15 * 60),
+        rateLimit(`login:email:${email}`, 8, 15 * 60)
+      ]);
+      if (!byIp.allowed || !byEmail.allowed) {
+        console.warn(`[AUTH] Limite de tentativas atingido ip=${ip}`);
+        return null;
+      }
 
-      if (!user?.passwordHash) return null;
-
-      const isPasswordValid = await bcrypt.compare(credentials.password, user.passwordHash);
-      if (!isPasswordValid) return null;
+      const user = await prisma.user.findUnique({ where: { email } });
+      const hash = user?.passwordHash ?? (await getDummyHash());
+      const isPasswordValid = await bcrypt.compare(password, hash);
+      if (!user?.passwordHash || !isPasswordValid) return null;
 
       return {
         id: user.id,
@@ -61,6 +81,7 @@ if (process.env.GITHUB_ID && process.env.GITHUB_SECRET) {
 export const authOptions: AuthOptions = {
   adapter: PrismaAdapter(prisma),
   providers,
+  secret: process.env.NEXTAUTH_SECRET,
   session: {
     strategy: 'jwt',
     maxAge: 60 * 60 * 24 * 7
@@ -71,19 +92,21 @@ export const authOptions: AuthOptions = {
       if (user) {
         token.id = user.id;
         token.isAdmin = Boolean(user.isAdmin);
+        token.checkedAt = Date.now();
         return token;
       }
 
-      // Revalida o privilegio no banco quando o cliente chama `update()`.
-      // Sem isto, promover ou rebaixar um admin so surtia efeito no proximo
-      // login. Nao revalidamos a cada request de proposito: seria uma ida ao
-      // banco em toda navegacao.
-      if (trigger === 'update' && token.id) {
+      // Revalida o privilegio no banco a cada 5 minutos (ou quando o cliente
+      // chama `update()`). Antes, um admin rebaixado continuava com acesso
+      // ate o token expirar — ate 7 dias.
+      const stale = !token.checkedAt || Date.now() - token.checkedAt > ADMIN_RECHECK_MS;
+      if (token.id && (trigger === 'update' || stale)) {
         const dbUser = await prisma.user.findUnique({
           where: { id: token.id },
           select: { isAdmin: true }
         });
         token.isAdmin = Boolean(dbUser?.isAdmin);
+        token.checkedAt = Date.now();
       }
 
       return token;
