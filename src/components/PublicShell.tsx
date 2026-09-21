@@ -1,3 +1,5 @@
+'use client';
+
 import { Instagram, Linkedin, Mail, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 import LanguageSelector from '@/components/LanguageSelector';

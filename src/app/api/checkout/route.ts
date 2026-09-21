@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { stripe } from "@/lib/stripe";
-import { prisma } from "@/lib/prisma"; // Assuming prisma is exported from here
+import { getStripe } from "@/lib/stripe";
+import { prisma } from "@/lib/prisma";
 
 export async function POST(req: Request) {
   try {
@@ -30,7 +30,7 @@ export async function POST(req: Request) {
     // Criar um Order pendente no banco de dados
     const order = await prisma.order.create({
       data: {
-        userId: (session.user as any).id,
+        userId: session.user.id,
         totalCents: product.priceCents,
         currency: product.currency,
         status: "PENDING",
@@ -47,7 +47,7 @@ export async function POST(req: Request) {
     });
 
     // Criar Sessão do Checkout no Stripe
-    const stripeSession = await stripe.checkout.sessions.create({
+    const stripeSession = await getStripe().checkout.sessions.create({
       success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?success=true`,
       cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/products/${product.slug}?canceled=true`,
       payment_method_types: ["card"],

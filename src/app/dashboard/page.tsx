@@ -2,8 +2,8 @@
 
 import { ArrowRight, ArrowUpRight, BarChart3, Bell, Check, Flame, LogOut, Menu, Package, Search, ShieldCheck, ShoppingBag, Sparkles, Star, X } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useMemo, useState } from 'react';
+import { signOut, useSession } from 'next-auth/react';
 import LanguageSelector from '@/components/LanguageSelector';
 import { portfolioProducts, type PortfolioProduct, type PortfolioSegment } from '@/lib/products';
 
@@ -16,22 +16,12 @@ const quickStats = [
 ];
 
 export default function DashboardPage() {
-  const router = useRouter();
-  const [isReady, setIsReady] = useState(false);
+  const { status } = useSession();
   const [activeSegment, setActiveSegment] = useState<(typeof segments)[number]>('Todos');
   const [search, setSearch] = useState('');
   const [quoteOpen, setQuoteOpen] = useState(false);
   const [quoteSent, setQuoteSent] = useState(false);
   const [cartCount, setCartCount] = useState(0);
-
-  useEffect(() => {
-    if (sessionStorage.getItem('kelven-authenticated') !== 'true') {
-      router.replace('/login');
-      return;
-    }
-
-    setIsReady(true);
-  }, [router]);
 
   const filteredProducts = useMemo(() => {
     const normalizedSearch = search.toLowerCase().trim();
@@ -42,9 +32,8 @@ export default function DashboardPage() {
     });
   }, [activeSegment, search]);
 
-  function signOut() {
-    sessionStorage.removeItem('kelven-authenticated');
-    router.push('/login');
+  function handleSignOut() {
+    signOut({ callbackUrl: '/login' });
   }
 
   function submitQuote(event: FormEvent<HTMLFormElement>) {
@@ -52,14 +41,16 @@ export default function DashboardPage() {
     setQuoteSent(true);
   }
 
-  if (!isReady) {
+  // O middleware (server-side) ja bloqueia /dashboard para quem nao tem sessao.
+  // Este estado cobre apenas o intervalo de hidratacao da sessao no cliente.
+  if (status === 'loading') {
     return <main className="flex min-h-screen items-center justify-center bg-[#F8F9FA] text-sm font-semibold text-[#718096]">Verificando acesso...</main>;
   }
 
   return (
     <main className="min-h-screen bg-[#F8F9FA] text-[#1A202C]">
       <nav className="sticky top-0 z-30 border-b border-black/5 bg-[#F8F9FA]/90 px-6 py-4 backdrop-blur-xl lg:px-10">
-        <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-6"><Link href="/dashboard" className="flex shrink-0 items-center gap-3 font-display text-lg font-bold tracking-tight"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#1A202C] text-sm text-white">K.</span> KELVEN<span className="font-normal text-[#A0AEC0]">/STUDIO</span></Link><div className="hidden items-center gap-7 text-sm font-semibold text-[#718096] xl:flex"><a href="#portfolio" className="text-[#1A202C]">Portfólio</a><a href="#mais-vendidos" className="transition hover:text-[#1A202C]">Mais vendidos</a><a href="#processo" className="transition hover:text-[#1A202C]">Como funciona</a></div><div className="flex items-center gap-2"><LanguageSelector /><button aria-label="Pesquisar produtos" className="hidden rounded-full border border-black/10 bg-white p-2.5 sm:block"><Search size={17} /></button><Link href="/checkout" aria-label="Abrir carrinho" className="relative rounded-full border border-black/10 bg-white p-2.5"><ShoppingBag size={17} />{cartCount > 0 && <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#36B7C9] px-1 text-[10px] font-bold text-white">{cartCount}</span>}</Link><Link href="/dashboard/notificacoes" aria-label="Notificações" className="hidden rounded-full border border-black/10 bg-white p-2.5 sm:block"><Bell size={17} /></Link><button aria-label="Abrir menu" className="rounded-full border border-black/10 bg-white p-2.5 xl:hidden"><Menu size={17} /></button><button onClick={signOut} className="inline-flex items-center gap-2 rounded-full border border-black/10 px-3 py-2.5 text-xs font-bold text-[#718096] transition hover:bg-white hover:text-[#1A202C]"><LogOut size={15} /><span className="hidden sm:inline">Sair</span></button></div></div>
+        <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-6"><Link href="/dashboard" className="flex shrink-0 items-center gap-3 font-display text-lg font-bold tracking-tight"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#1A202C] text-sm text-white">K.</span> KELVEN<span className="font-normal text-[#A0AEC0]">/STUDIO</span></Link><div className="hidden items-center gap-7 text-sm font-semibold text-[#718096] xl:flex"><a href="#portfolio" className="text-[#1A202C]">Portfólio</a><a href="#mais-vendidos" className="transition hover:text-[#1A202C]">Mais vendidos</a><a href="#processo" className="transition hover:text-[#1A202C]">Como funciona</a></div><div className="flex items-center gap-2"><LanguageSelector /><button aria-label="Pesquisar produtos" className="hidden rounded-full border border-black/10 bg-white p-2.5 sm:block"><Search size={17} /></button><Link href="/checkout" aria-label="Abrir carrinho" className="relative rounded-full border border-black/10 bg-white p-2.5"><ShoppingBag size={17} />{cartCount > 0 && <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#36B7C9] px-1 text-[10px] font-bold text-white">{cartCount}</span>}</Link><Link href="/dashboard/notificacoes" aria-label="Notificações" className="hidden rounded-full border border-black/10 bg-white p-2.5 sm:block"><Bell size={17} /></Link><button aria-label="Abrir menu" className="rounded-full border border-black/10 bg-white p-2.5 xl:hidden"><Menu size={17} /></button><button onClick={handleSignOut} className="inline-flex items-center gap-2 rounded-full border border-black/10 px-3 py-2.5 text-xs font-bold text-[#718096] transition hover:bg-white hover:text-[#1A202C]"><LogOut size={15} /><span className="hidden sm:inline">Sair</span></button></div></div>
       </nav>
 
       <div className="mx-auto max-w-[1440px] px-6 pb-20 lg:px-10">

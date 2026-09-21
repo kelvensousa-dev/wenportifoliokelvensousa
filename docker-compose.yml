@@ -19,7 +19,9 @@ services:
     environment:
       POSTGRES_DB: platform
       POSTGRES_USER: platform
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
+    # Porta comentada: o banco so precisa ser alcancavel pela rede interna.
+    # Descomente apenas se for conectar o Prisma Studio a partir do host.
     ports:
       - "5433:5432"
     volumes:
@@ -34,11 +36,17 @@ services:
 
   redis:
     image: redis:7-alpine
-    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-change-me}
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:?defina REDIS_PASSWORD no .env}
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
     volumes:
       - redis_data:/data
+    # O healthcheck anterior era `redis-cli ping` sem autenticacao. Como o
+    # servidor sobe com --requirepass, o comando devolvia NOAUTH, o container
+    # nunca ficava "healthy" e o servico `app` (que depende de
+    # service_healthy) jamais iniciava.
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" ping | grep -q PONG"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -50,7 +58,7 @@ services:
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: ${S3_ACCESS_KEY:-minioadmin}
-      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-change-me}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:?defina S3_SECRET_KEY no .env}
     volumes:
       - minio_data:/data
     restart: unless-stopped
