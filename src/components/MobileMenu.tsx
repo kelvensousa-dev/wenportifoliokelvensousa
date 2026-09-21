@@ -60,7 +60,7 @@ export default function MobileMenu({ links, breakpoint = 'md' }: { links: MenuLi
                       {link.label}
                     </a>
                   ) : (
-                    <Link href={link.href} className="flex min-h-12 items-center rounded-2xl px-4 text-sm font-bold text-[#1A202C] hover:bg-[#F8F9FA]">
+                    <Link href={link.href as any} className="flex min-h-12 items-center rounded-2xl px-4 text-sm font-bold text-[#1A202C] hover:bg-[#F8F9FA]">
                       {link.label}
                     </Link>
                   )}

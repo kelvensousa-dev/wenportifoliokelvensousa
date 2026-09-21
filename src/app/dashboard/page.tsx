@@ -9,6 +9,7 @@ import Honeypot from '@/components/Honeypot';
 import LanguageSelector from '@/components/LanguageSelector';
 import MobileMenu from '@/components/MobileMenu';
 import Modal from '@/components/Modal';
+import SiteFooter from '@/components/SiteFooter';
 import { catalog, formatPrice, segments, type CatalogProduct, type PortfolioSegment } from '@/lib/products';
 import { sendLead } from '@/lib/leads-client';
 
@@ -175,13 +176,7 @@ function DashboardContent() {
         </section>
       </div>
 
-      <footer className="border-t border-black/5 px-4 py-8 sm:px-6 lg:px-10">
-        <div className="mx-auto flex max-w-[1440px] flex-col justify-between gap-4 text-xs text-[#A0AEC0] md:flex-row">
-          <span className="font-display font-bold text-[#1A202C]">KELVEN/STUDIO</span>
-          <div className="flex flex-wrap gap-4"><Link href="/contato">Contato</Link><Link href="/termos-de-uso">Termos</Link><Link href="/politica-de-privacidade">Privacidade</Link></div>
-          <span>© {new Date().getFullYear()} Kelven Studio</span>
-        </div>
-      </footer>
+      <SiteFooter />
 
       <Modal open={quoteOpen} onClose={closeQuote} label="Pedir orçamento">
         {quoteSent ? (

@@ -315,6 +315,18 @@ const pageTranslations: Record<string, Record<SiteLanguage, string>> = {
   , 'Enviar briefing': { 'pt-BR': 'Enviar briefing', es: 'Enviar briefing', 'en-US': 'Send brief' }
   , 'Pedido recebido.': { 'pt-BR': 'Pedido recebido.', es: 'Solicitud recibida.', 'en-US': 'Request received.' }
   , 'Pagamentos via Stripe · LGPD': { 'pt-BR': 'Pagamentos via Stripe · LGPD', es: 'Pagos vía Stripe · LGPD', 'en-US': 'Payments via Stripe · LGPD' }
+  , 'Política de compra': { 'pt-BR': 'Política de compra', es: 'Política de compra', 'en-US': 'Purchase policy' }
+  , 'Garantias e direitos': { 'pt-BR': 'Garantias e direitos', es: 'Garantías y derechos', 'en-US': 'Warranties and rights' }
+  , 'Central de atendimento': { 'pt-BR': 'Central de atendimento', es: 'Centro de atención', 'en-US': 'Support center' }
+  , 'Informações legais': { 'pt-BR': 'Informações legais', es: 'Información legal', 'en-US': 'Legal information' }
+  , '7 dias para desistir': { 'pt-BR': '7 dias para desistir', es: '7 días para desistir', 'en-US': '7 days to change your mind' }
+  , 'Direito de arrependimento nas compras online (CDC, art. 49).': { 'pt-BR': 'Direito de arrependimento nas compras online (CDC, art. 49).', es: 'Derecho de arrepentimiento en compras en línea (CDC, art. 49).', 'en-US': 'Right of withdrawal on online purchases (CDC, art. 49).' }
+  , 'Garantia legal': { 'pt-BR': 'Garantia legal', es: 'Garantía legal', 'en-US': 'Legal warranty' }
+  , 'Proteção contra defeitos e oferta descumprida, conforme a lei.': { 'pt-BR': 'Proteção contra defeitos e oferta descumprida, conforme a lei.', es: 'Protección contra defectos e incumplimiento de la oferta, según la ley.', 'en-US': 'Protection against defects and unfulfilled offers, as required by law.' }
+  , 'Amparo ao consumidor': { 'pt-BR': 'Amparo ao consumidor', es: 'Amparo al consumidor', 'en-US': 'Consumer protection' }
+  , 'WhatsApp com assistente virtual (IA) e equipe humana.': { 'pt-BR': 'WhatsApp com assistente virtual (IA) e equipe humana.', es: 'WhatsApp con asistente virtual (IA) y equipo humano.', 'en-US': 'WhatsApp with a virtual assistant (AI) and a human team.' }
+  , 'Assistente virtual com IA no WhatsApp, 24 horas por dia. Peça um atendente humano quando quiser.': { 'pt-BR': 'Assistente virtual com IA no WhatsApp, 24 horas por dia. Peça um atendente humano quando quiser.', es: 'Asistente virtual con IA en WhatsApp, las 24 horas. Pide un agente humano cuando quieras.', 'en-US': 'AI virtual assistant on WhatsApp, 24 hours a day. Ask for a human agent whenever you like.' }
+  , 'Falar no WhatsApp': { 'pt-BR': 'Falar no WhatsApp', es: 'Hablar por WhatsApp', 'en-US': 'Chat on WhatsApp' }
 };
 
 const LanguageContext = createContext<LanguageContextValue | null>(null);

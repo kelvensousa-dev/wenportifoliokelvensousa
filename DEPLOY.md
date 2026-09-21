@@ -11,6 +11,18 @@ nano .env
 
 Obrigatório trocar: `POSTGRES_PASSWORD` (e a mesma senha dentro de `DATABASE_URL`), `REDIS_PASSWORD` (e em `REDIS_URL`), `NEXTAUTH_SECRET`, `NEXTAUTH_URL` e `NEXT_PUBLIC_APP_URL` (ambos `https://SEU-DOMINIO`), chaves do Stripe e `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` (mínimo 12 caracteres).
 
+Dados públicos do site (rodapé, contato e páginas legais). São embutidos no build, então defina-os **antes** de `docker compose build`:
+
+```
+NEXT_PUBLIC_CONTACT_EMAIL=contato@seu-dominio
+NEXT_PUBLIC_WHATSAPP_NUMBER=5535XXXXXXXXX   # DDI 55 + DDD + número; sem valor, usa o número padrão do código
+NEXT_PUBLIC_COMPANY_NAME=Razão social ou nome empresarial
+NEXT_PUBLIC_COMPANY_DOCUMENT=CNPJ ou CPF
+NEXT_PUBLIC_COMPANY_ADDRESS=Endereço completo
+```
+
+O nome empresarial, o CNPJ/CPF e o endereço são exigidos pelo Decreto 7.962/2013 (art. 2º) para lojas online. Enquanto `COMPANY_DOCUMENT` e `COMPANY_ADDRESS` estiverem vazios, eles não aparecem no site.
+
 Gerar segredos: `openssl rand -base64 32`
 
 ## 2. Primeiro deploy (ainda sem certificado)
@@ -74,6 +86,9 @@ docker compose up -d   # o serviço migrate aplica novas migrações automaticam
 - [ ] Cadastro, login e logout funcionando
 - [ ] Compra de teste gera a Product Key em "Minhas compras"
 - [ ] Formulário de contato aparece em Admin → Leads
+- [ ] Rodapé mostra CNPJ/CPF e endereço; número de WhatsApp abre a conversa certa
+- [ ] Assistente de IA do WhatsApp se identifica como IA e passa para atendente humano quando pedido (o que a página /atendimento promete)
+- [ ] Textos das páginas legais revisados por advogado
 - [ ] `/admin` bloqueado para usuário comum
 - [ ] Teste em celular (Android e iPhone), tablet e desktop
 - [ ] Nota A em https://securityheaders.com e https://www.ssllabs.com/ssltest/

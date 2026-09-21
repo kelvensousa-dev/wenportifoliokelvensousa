@@ -82,7 +82,11 @@ function CheckoutContent() {
             />
           </div>
           <p className="mt-4 text-xs leading-5 text-[#A0AEC0]">
-            Ao continuar, você concorda com os <Link href="/termos-de-uso" className="underline">termos de uso</Link> e a <Link href="/politica-de-privacidade" className="underline">política de privacidade</Link>.
+            Ao continuar, você concorda com os <Link href="/termos-de-uso" className="underline">termos de uso</Link>, a <Link href="/politica-de-privacidade" className="underline">política de privacidade</Link> e a <Link href="/politica-de-compra" className="underline">política de compra</Link>.
+          </p>
+          <p className="mt-2 flex items-start gap-2 text-xs leading-5 text-[#718096]">
+            <ShieldCheck size={14} className="mt-0.5 shrink-0 text-[#36A5B4]" />
+            <span>Você pode desistir da compra em até 7 dias, sem justificar, e receber o valor de volta (CDC, art. 49). Veja <Link href="/garantias-e-direitos" className="underline">garantias e direitos</Link>.</span>
           </p>
         </section>
 

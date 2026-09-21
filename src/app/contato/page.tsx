@@ -1,11 +1,12 @@
 'use client';
 
 import { ArrowRight, Check, Mail, MessageCircle } from 'lucide-react';
+import Link from 'next/link';
 import { FormEvent, useState } from 'react';
 import Honeypot from '@/components/Honeypot';
 import PublicShell from '@/components/PublicShell';
 import { sendLead } from '@/lib/leads-client';
-import { contactEmail, whatsappUrl } from '@/lib/site';
+import { contactEmail, whatsappDisplay, whatsappUrl } from '@/lib/site';
 
 export default function ContactPage() {
   const [sent, setSent] = useState(false);
@@ -33,10 +34,14 @@ export default function ContactPage() {
             <p className="mt-7 max-w-md text-base leading-7 text-[#718096]">Conte o que você quer vender, automatizar ou construir. Respondemos com clareza sobre escopo, prazo e investimento.</p>
             <div className="mt-10 grid gap-3">
               <a href={`mailto:${contactEmail}`} className="flex items-center gap-4 break-all rounded-2xl border border-black/5 bg-white p-4 text-sm font-semibold"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#EFFFFF] text-[#1597A8]"><Mail size={18} /></span> {contactEmail}</a>
-              {whatsappUrl && (
-                <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 rounded-2xl border border-black/5 bg-white p-4 text-sm font-semibold"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#E6FFFA] text-[#277C73]"><MessageCircle size={18} /></span> Falar pelo WhatsApp</a>
-              )}
+              <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 rounded-2xl border border-black/5 bg-white p-4 text-sm font-semibold">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#E6FFFA] text-[#277C73]"><MessageCircle size={18} /></span>
+                <span>Falar pelo WhatsApp <span className="block text-xs font-medium text-[#718096]" data-no-translate>{whatsappDisplay}</span></span>
+              </a>
             </div>
+            <p className="mt-5 max-w-md text-xs leading-5 text-[#718096]">
+              O atendimento no WhatsApp começa com um assistente virtual (IA), 24 horas por dia. Você pode pedir um atendente humano quando quiser. <Link href="/atendimento" className="font-semibold underline">Como funciona o atendimento</Link> · <Link href="/garantias-e-direitos" className="font-semibold underline">Seus direitos</Link>
+            </p>
           </div>
           <div className="rounded-3xl border border-black/5 bg-white p-6 shadow-glass sm:p-7 md:p-10">
             {sent ? (

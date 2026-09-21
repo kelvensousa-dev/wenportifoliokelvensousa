@@ -52,7 +52,7 @@ function AdminLoginForm() {
         return;
       }
 
-      router.replace(callbackUrl);
+      router.replace(callbackUrl as any);
       router.refresh();
     } catch {
       setError('Não foi possível concluir o acesso. Tente novamente.');

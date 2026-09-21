@@ -32,7 +32,7 @@ export default function AdminShell({ children }: Readonly<{ children: React.Reac
         <p className="mt-10 text-[10px] font-extrabold uppercase tracking-[0.2em] text-[#A0AEC0]">Command center</p>
         <nav className="mt-4 grid gap-1">
           {navigation.map(({ href, label, icon: Icon }) => (
-            <Link key={href} href={href} aria-current={pathname === href ? 'page' : undefined} className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold transition ${pathname === href ? 'bg-[#1A202C] text-white' : 'text-[#718096] hover:bg-[#F8F9FA] hover:text-[#1A202C]'}`}>
+            <Link key={href} href={href as any} aria-current={pathname === href ? 'page' : undefined} className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold transition ${pathname === href ? 'bg-[#1A202C] text-white' : 'text-[#718096] hover:bg-[#F8F9FA] hover:text-[#1A202C]'}`}>
               <Icon size={17} /> {label}<ChevronRight size={14} className="ml-auto opacity-40" />
             </Link>
           ))}
@@ -58,7 +58,7 @@ export default function AdminShell({ children }: Readonly<{ children: React.Reac
           {/* Navegacao para celular/tablet: antes a barra lateral simplesmente sumia abaixo de 1024px. */}
           <nav aria-label="Seções do admin" className="flex gap-2 overflow-x-auto px-4 pb-3 sm:px-6 lg:hidden">
             {navigation.map(({ href, label, icon: Icon }) => (
-              <Link key={href} href={href} aria-current={pathname === href ? 'page' : undefined} className={`inline-flex shrink-0 items-center gap-2 rounded-full px-3 py-2 text-xs font-bold ${pathname === href ? 'bg-[#1A202C] text-white' : 'border border-black/10 bg-white text-[#718096]'}`}>
+              <Link key={href} href={href as any} aria-current={pathname === href ? 'page' : undefined} className={`inline-flex shrink-0 items-center gap-2 rounded-full px-3 py-2 text-xs font-bold ${pathname === href ? 'bg-[#1A202C] text-white' : 'border border-black/10 bg-white text-[#718096]'}`}>
                 <Icon size={14} /> {label}
               </Link>
             ))}

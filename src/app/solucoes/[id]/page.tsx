@@ -36,7 +36,7 @@ export default function SolutionPage({ params }: SolutionPageProps) {
             <h1 className="mt-5 max-w-3xl break-words font-display text-4xl font-bold leading-[.98] tracking-[-.05em] sm:text-5xl md:text-7xl">{product.name}<span className="text-[#36B7C9]">.</span></h1>
             <p className="mt-7 max-w-2xl text-base leading-7 text-[#718096] sm:text-lg sm:leading-8">{product.summary} Uma solução pensada para sair do briefing e chegar ao resultado sem camadas desnecessárias.</p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-              <Link href={checkoutHref} className="inline-flex items-center justify-center gap-2 rounded-full bg-[#1A202C] px-6 py-3.5 text-sm font-bold text-white transition hover:bg-[#2D3748]">Comprar solução <ArrowRight size={17} /></Link>
+              <Link href={checkoutHref as any} className="inline-flex items-center justify-center gap-2 rounded-full bg-[#1A202C] px-6 py-3.5 text-sm font-bold text-white transition hover:bg-[#2D3748]">Comprar solução <ArrowRight size={17} /></Link>
               <Link href="/contato" className="inline-flex items-center justify-center gap-2 rounded-full border border-black/10 bg-white px-6 py-3.5 text-sm font-bold hover:bg-[#F8F9FA]">Falar com especialista</Link>
             </div>
           </div>
@@ -60,7 +60,7 @@ export default function SolutionPage({ params }: SolutionPageProps) {
         </section>
         <section className="mt-12 flex flex-col justify-between gap-5 rounded-3xl bg-[#1A202C] p-6 text-white sm:p-7 md:flex-row md:items-center md:p-10">
           <div className="flex items-start gap-4"><ShieldCheck className="mt-1 shrink-0 text-[#9AE6B4]" size={22} /><div><h2 className="font-display text-2xl font-bold">Pronto para colocar no ar?</h2><p className="mt-2 text-sm text-[#CBD5E0]">Checkout seguro e entrega digital após a confirmação do pagamento.</p></div></div>
-          <Link href={checkoutHref} className="inline-flex items-center justify-center gap-2 rounded-full bg-[#9AE6B4] px-5 py-3 text-sm font-bold text-[#1A202C]">Começar agora <ArrowRight size={16} /></Link>
+          <Link href={checkoutHref as any} className="inline-flex items-center justify-center gap-2 rounded-full bg-[#9AE6B4] px-5 py-3 text-sm font-bold text-[#1A202C]">Começar agora <ArrowRight size={16} /></Link>
         </section>
       </div>
     </PublicShell>

@@ -9,6 +9,7 @@ import Honeypot from '@/components/Honeypot';
 import LanguageSelector from '@/components/LanguageSelector';
 import MobileMenu from '@/components/MobileMenu';
 import Modal from '@/components/Modal';
+import SiteFooter from '@/components/SiteFooter';
 import { catalog, formatPrice, segments, type PortfolioSegment } from '@/lib/products';
 import { sendLead } from '@/lib/leads-client';
 
@@ -167,11 +168,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <footer className="mx-auto flex max-w-7xl flex-col gap-4 px-4 pb-10 pt-4 text-xs text-[#A0AEC0] sm:px-6 md:flex-row md:items-center md:justify-between lg:px-8">
-        <span className="font-display font-bold text-[#1A202C]">KELVEN/STUDIO</span>
-        <div className="flex flex-wrap gap-4"><Link href="/termos-de-uso">Termos</Link><Link href="/politica-de-privacidade">Privacidade</Link><Link href="/contato">Contato</Link></div>
-        <span>© {new Date().getFullYear()} Kelven Studio. Feito com intenção.</span>
-      </footer>
+      <SiteFooter />
 
       <Modal open={demoOpen} onClose={closeDemo} label="Demonstração do estúdio" maxWidth="max-w-2xl">
         <div className="mt-6 aspect-video rounded-2xl bg-[#EDF2F7] p-4 sm:p-8">

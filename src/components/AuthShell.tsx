@@ -83,7 +83,7 @@ function AuthForm({ mode, oauthProviders = [] }: AuthShellProps) {
         return;
       }
 
-      router.push(callbackUrl);
+      router.push(callbackUrl as any);
       router.refresh();
     } catch {
       setError('Falha de conexão. Verifique sua internet e tente novamente.');

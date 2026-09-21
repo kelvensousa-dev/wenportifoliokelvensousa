@@ -63,26 +63,37 @@ export default async function PurchasesPage() {
             {visibleOrders.map((order) => {
               const status = statusLabel[order.status] ?? statusLabel.PENDING;
               return (
-                <article key={order.id} className="rounded-3xl border border-black/5 bg-white p-5 sm:p-6">
-                  <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
+                <article key={order.id} className="group relative overflow-hidden rounded-3xl border border-black/5 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl sm:p-6">
+                  <div className="absolute inset-0 bg-gradient-to-br from-transparent to-black/[0.02] opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                  <div className="relative z-10 flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
                     <div className="flex gap-4">
-                      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#EFFFFF] text-[#1597A8]">
-                        {order.status === 'CANCELED' ? <XCircle size={19} /> : order.status === 'PENDING' ? <Clock3 size={19} /> : <Package size={19} />}
+                      <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl shadow-inner ${order.status === 'CANCELED' ? 'bg-[#FFF5F5] text-[#C53030]' : order.status === 'PENDING' ? 'bg-[#FFFAF0] text-[#DD6B20]' : 'bg-gradient-to-br from-[#EFFFFF] to-[#E6FFFA] text-[#1597A8]'}`}>
+                        {order.status === 'CANCELED' ? <XCircle size={20} /> : order.status === 'PENDING' ? <Clock3 size={20} /> : <Package size={20} />}
                       </span>
-                      <div className="min-w-0">
-                        <h2 className="text-sm font-bold">{order.items.map((item) => item.product.name).join(', ')}</h2>
-                        <p className="mt-1 break-all font-mono text-[11px] text-[#A0AEC0]">{order.reference}</p>
-                        <p className="mt-1 text-xs text-[#718096]">{order.createdAt.toLocaleDateString('pt-BR')} · <span data-no-translate>{formatPrice(order.totalCents, order.currency)}</span></p>
+                      <div className="min-w-0 flex flex-col justify-center">
+                        <h2 className="text-base font-bold text-[#1A202C]">{order.items.map((item) => item.product.name).join(', ')}</h2>
+                        <div className="mt-1 flex items-center gap-2 text-xs text-[#718096]">
+                          <span className="font-medium">{order.createdAt.toLocaleDateString('pt-BR')}</span>
+                          <span>•</span>
+                          <span className="font-semibold text-[#4A5568]" data-no-translate>{formatPrice(order.totalCents, order.currency)}</span>
+                        </div>
+                        <p className="mt-1.5 break-all font-mono text-[10px] uppercase tracking-wider text-[#A0AEC0]">{order.reference}</p>
                       </div>
                     </div>
-                    <span className={`w-fit rounded-full px-3 py-1 text-xs font-bold ${status.className}`}>{status.text}</span>
+                    <span className={`w-fit shrink-0 rounded-full border px-3 py-1 text-xs font-bold shadow-sm ${status.className} ${order.status === 'PAID' || order.status === 'FULFILLED' ? 'border-[#9AE6B4]/50' : 'border-black/5'}`}>{status.text}</span>
                   </div>
                   {order.productKeys.length > 0 && (
-                    <div className="mt-5 rounded-2xl border border-[#36B7C9]/20 bg-[#EFFFFF] p-4">
-                      <p className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-[0.18em] text-[#1597A8]"><KeyRound size={14} /> Product Key</p>
-                      {order.productKeys.map((productKey) => (
-                        <p key={productKey.id} className="mt-2 select-all break-all font-mono text-base font-bold tracking-wider" data-no-translate>{productKey.key}</p>
-                      ))}
+                    <div className="relative z-10 mt-6 overflow-hidden rounded-2xl bg-[#1A202C] p-5 text-white shadow-lg">
+                      <div className="absolute -right-4 -top-4 h-16 w-16 rounded-full bg-[#36B7C9]/20 blur-xl" />
+                      <div className="absolute -bottom-4 -left-4 h-16 w-16 rounded-full bg-[#9AE6B4]/20 blur-xl" />
+                      <p className="relative flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-[0.2em] text-[#A0AEC0]"><KeyRound size={14} className="text-[#36B7C9]" /> Product Key</p>
+                      <div className="mt-3 flex flex-col gap-2">
+                        {order.productKeys.map((productKey) => (
+                          <div key={productKey.id} className="relative rounded-xl border border-white/10 bg-white/5 p-3 backdrop-blur-md transition-colors hover:bg-white/10">
+                            <p className="select-all break-all font-mono text-sm font-semibold tracking-widest text-[#E2E8F0]" data-no-translate>{productKey.key}</p>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </article>
