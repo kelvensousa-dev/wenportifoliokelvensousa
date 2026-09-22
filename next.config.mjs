@@ -39,6 +39,9 @@ const securityHeaders = [
 const nextConfig = {
   output: 'standalone',
   poweredByHeader: false,
+  // O site nao usa next/image. Desligar o otimizador remove a superficie de
+  // ataque de /_next/image (varios avisos de seguranca do Next 14 sem patch).
+  images: { unoptimized: true },
   reactStrictMode: true,
   // `typedRoutes` (experimental) foi desligado: ele obrigava `as any` em
   // varios redirecionamentos e quebrava o build com rotas montadas em tempo

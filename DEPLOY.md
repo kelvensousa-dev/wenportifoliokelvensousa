@@ -23,7 +23,9 @@ NEXT_PUBLIC_COMPANY_ADDRESS=Endereço completo
 
 O nome empresarial, o CNPJ/CPF e o endereço são exigidos pelo Decreto 7.962/2013 (art. 2º) para lojas online. Enquanto `COMPANY_DOCUMENT` e `COMPANY_ADDRESS` estiverem vazios, eles não aparecem no site.
 
-Gerar segredos: `openssl rand -base64 32`
+Gerar segredos: `openssl rand -hex 32`
+
+> **Use `-hex`, não `-base64`.** O base64 gera `/`, `+` e `=`, que quebram `DATABASE_URL` e `REDIS_URL` (a senha vai dentro da URL) e o app não conecta no banco.
 
 ## 2. Primeiro deploy (ainda sem certificado)
 
@@ -93,4 +95,4 @@ docker compose up -d   # o serviço migrate aplica novas migrações automaticam
 - [ ] Teste em celular (Android e iPhone), tablet e desktop
 - [ ] Nota A em https://securityheaders.com e https://www.ssllabs.com/ssltest/
 - [ ] Backup do banco agendado e restauração testada
-- [ ] Firewall: somente portas 22, 80 e 443 abertas
+- [ ] Firewall: somente a porta do SSH (**22022** neste servidor), 80 e 443 abertas — libere a 22022 no `ufw` ANTES de ativá-lo, senão você perde o acesso
