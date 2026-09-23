@@ -44,6 +44,17 @@ model User {
   cpfCnpj         String?
   /// ID do cliente no Asaas (cus_...). Criado na primeira compra em reais.
   asaasCustomerId String?   @unique
+
+  // ── Verificacao em duas etapas (TOTP) ── usada hoje pelas contas admin.
+  /// Segredo TOTP ativo, CRIPTOGRAFADO (AES-256-GCM). Nunca guardado em texto.
+  totpSecret         String?
+  /// Segredo gerado na configuracao, aguardando o primeiro codigo valido.
+  totpPendingSecret  String?
+  totpEnabledAt      DateTime?
+  /// Ultimo intervalo de 30s usado: impede reutilizar o mesmo codigo.
+  totpLastStep       Int?
+  /// Codigos de recuperacao (hash SHA-256); cada um vale uma vez.
+  totpRecoveryHashes String[]  @default([])
 }
 
 model RefreshToken {

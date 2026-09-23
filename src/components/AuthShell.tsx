@@ -78,6 +78,11 @@ function AuthForm({ mode, oauthProviders = [] }: AuthShellProps) {
 
       const result = await signIn('credentials', { redirect: false, email, password });
 
+      if (result?.error === 'OTP_REQUIRED' || result?.error === 'OTP_INVALID') {
+        // Conta com 2FA (administrativa): o acesso e pela tela propria.
+        setError('Esta conta usa verificação em duas etapas. Entre pelo acesso administrativo (/admin/login).');
+        return;
+      }
       if (result?.error) {
         setError(isSignup ? 'Conta criada, mas o acesso falhou. Tente entrar novamente.' : 'E-mail ou senha incorretos. Após várias tentativas, aguarde 15 minutos.');
         return;

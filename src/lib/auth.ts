@@ -6,6 +6,7 @@ import { PrismaAdapter } from '@next-auth/prisma-adapter';
 import { prisma } from '@/lib/prisma';
 import { rateLimit } from '@/lib/rate-limit';
 import { clientIp } from '@/lib/security';
+import { verifySecondFactor } from '@/lib/two-factor';
 import * as bcrypt from 'bcryptjs';
 
 /**
@@ -27,7 +28,9 @@ const providers: AuthOptions['providers'] = [
     name: 'Credentials',
     credentials: {
       email: { label: 'Email', type: 'email' },
-      password: { label: 'Senha', type: 'password' }
+      password: { label: 'Senha', type: 'password' },
+      // Codigo do app autenticador (ou de recuperacao) — so para contas com 2FA.
+      otp: { label: 'Código 2FA', type: 'text' }
     },
     async authorize(credentials, req) {
       const email = credentials?.email?.toLowerCase().trim();
@@ -49,6 +52,17 @@ const providers: AuthOptions['providers'] = [
       const hash = user?.passwordHash ?? (await getDummyHash());
       const isPasswordValid = await bcrypt.compare(password, hash);
       if (!user?.passwordHash || !isPasswordValid) return null;
+
+      // Segunda etapa (2FA). Os erros abaixo chegam ao formulario como
+      // `result.error`, para ele pedir o codigo ou avisar que esta errado.
+      if (user.totpEnabledAt) {
+        const otp = credentials?.otp?.trim();
+        if (!otp) throw new Error('OTP_REQUIRED');
+        if (otp.length > 20 || !(await verifySecondFactor(user.id, otp))) {
+          console.warn(`[AUTH] Codigo 2FA invalido ip=${ip}`);
+          throw new Error('OTP_INVALID');
+        }
+      }
 
       return {
         id: user.id,
@@ -87,6 +101,20 @@ export const authOptions: AuthOptions = {
     maxAge: 60 * 60 * 24 * 7
   },
   callbacks: {
+    /**
+     * Contas admin so entram por e-mail + senha + 2FA. O login com Google ou
+     * GitHub pularia a segunda etapa, entao e recusado para administradores.
+     */
+    async signIn({ user, account }) {
+      if (!account || account.provider === 'credentials') return true;
+      if (!user.email) return true;
+      const dbUser = await prisma.user.findUnique({ where: { email: user.email.toLowerCase() }, select: { isAdmin: true } });
+      if (dbUser?.isAdmin) {
+        console.warn(`[AUTH] Login social recusado para conta admin (${account.provider})`);
+        return false;
+      }
+      return true;
+    },
     async jwt({ token, user, trigger }) {
       // Primeiro login: copia os dados do usuario para o token.
       if (user) {

@@ -14,7 +14,8 @@ const navigation: Array<{ href: string; label: string; icon: LucideIcon }> = [
   { href: '/admin/leads', label: 'Leads & campanhas', icon: Users },
   { href: '/admin/carrinhos', label: 'Carrinhos abandonados', icon: PackageCheck },
   { href: '/admin/releases', label: 'Releases & updates', icon: GitBranch },
-  { href: '/admin/atendimento', label: 'IA & WhatsApp', icon: Bot }
+  { href: '/admin/atendimento', label: 'IA & WhatsApp', icon: Bot },
+  { href: '/admin/seguranca', label: 'Segurança', icon: ShieldCheck }
 ];
 
 export default function AdminShell({ children }: Readonly<{ children: React.ReactNode }>) {
