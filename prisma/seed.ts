@@ -24,6 +24,7 @@ async function main() {
       description: item.summary,
       priceCents: item.priceCents,
       currency: item.currency,
+      priceBrlCents: item.priceBrlCents ?? null,
       featured: Boolean(item.bestSeller),
       active: true
     };

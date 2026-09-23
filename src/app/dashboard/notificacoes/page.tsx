@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { ArrowLeft, Clock3, KeyRound, Package, ShoppingBag, XCircle } from 'lucide-react';
+import { ArrowLeft, ArrowUpRight, Clock3, KeyRound, Package, ShoppingBag, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import SignOutButton from '@/components/SignOutButton';
 import { prisma } from '@/lib/prisma';
@@ -37,7 +37,7 @@ export default async function PurchasesPage() {
     }
   });
 
-  const visibleOrders = orders.filter((order) => order.status !== 'PENDING' || Date.now() - order.createdAt.getTime() < 24 * 60 * 60 * 1000);
+  const visibleOrders = orders.filter((order) => order.status !== 'PENDING' || Date.now() - order.createdAt.getTime() < 4 * 24 * 60 * 60 * 1000);
 
   return (
     <main className="min-h-screen bg-[#F8F9FA] px-4 py-8 text-[#1A202C] sm:px-6 lg:px-10">
@@ -80,7 +80,14 @@ export default async function PurchasesPage() {
                         <p className="mt-1.5 break-all font-mono text-[10px] uppercase tracking-wider text-[#A0AEC0]">{order.reference}</p>
                       </div>
                     </div>
-                    <span className={`w-fit shrink-0 rounded-full border px-3 py-1 text-xs font-bold shadow-sm ${status.className} ${order.status === 'PAID' || order.status === 'FULFILLED' ? 'border-[#9AE6B4]/50' : 'border-black/5'}`}>{status.text}</span>
+                    <div className="flex shrink-0 flex-col items-start gap-2 sm:items-end">
+                      <span className={`w-fit rounded-full border px-3 py-1 text-xs font-bold shadow-sm ${status.className} ${order.status === 'PAID' || order.status === 'FULFILLED' ? 'border-[#9AE6B4]/50' : 'border-black/5'}`}>{status.text}</span>
+                      {order.status === 'PENDING' && order.paymentUrl && (
+                        <a href={order.paymentUrl} rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-full bg-[#1A202C] px-4 py-2 text-xs font-bold text-white transition hover:bg-[#2D3748]">
+                          Pagar agora <ArrowUpRight size={14} />
+                        </a>
+                      )}
+                    </div>
                   </div>
                   {order.productKeys.length > 0 && (
                     <div className="relative z-10 mt-6 overflow-hidden rounded-2xl bg-[#1A202C] p-5 text-white shadow-lg">

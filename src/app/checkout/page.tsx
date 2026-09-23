@@ -3,29 +3,28 @@
 import { ArrowLeft, CircleAlert, CreditCard, Home, LockKeyhole, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { Suspense } from 'react';
+import { Suspense, useState } from 'react';
+import { AsaasCheckoutForm } from '@/components/AsaasCheckoutForm';
 import { CheckoutButton } from '@/components/CheckoutButton';
 import PublicShell from '@/components/PublicShell';
 import { findProduct, formatPrice } from '@/lib/products';
 
 /**
- * CHECKOUT REESCRITO.
+ * Checkout com dois gateways:
+ * - Reais (Asaas): Pix, boleto ou cartao nacional, na fatura hospedada do Asaas.
+ * - Dolar (Stripe): cartao internacional, na pagina hospedada do Stripe.
  *
- * A versao anterior era uma simulacao perigosa para producao:
- * - Pedia numero do cartao e CVV em campos do proprio site (dados de cartao
- *   trafegando pelo seu servidor = obrigacoes PCI-DSS que o projeto nao cumpre).
- * - "Autorizava" o pagamento com o codigo fixo 123456, exibido na tela.
- * - Mostrava "Pedido confirmado" e uma Product Key falsa sem cobrar nada.
- * - O produto era sempre "Orbit CRM Pro", qualquer que fosse a escolha.
- *
- * Agora: resumo do produto escolhido (?produto=slug) e redirecionamento para
- * a pagina de pagamento hospedada pelo Stripe. A confirmacao real chega pelo
- * webhook (/api/webhooks/stripe), que gera a licenca.
+ * Nenhum dado de cartao passa por este site. A confirmacao real chega pelos
+ * webhooks (/api/webhooks/asaas e /api/webhooks/stripe), que geram a licenca.
  */
+type Method = 'brl' | 'usd';
+
 function CheckoutContent() {
   const searchParams = useSearchParams();
   const product = findProduct(searchParams.get('produto'));
   const canceled = searchParams.get('canceled') === 'true';
+  const sellsInBrl = Boolean(product?.priceBrlCents);
+  const [method, setMethod] = useState<Method>(sellsInBrl ? 'brl' : 'usd');
 
   if (!product) {
     return (
@@ -38,7 +37,18 @@ function CheckoutContent() {
     );
   }
 
-  const price = formatPrice(product.priceCents, product.currency);
+  const activeMethod: Method = sellsInBrl ? method : 'usd';
+  const price =
+    activeMethod === 'brl' && product.priceBrlCents
+      ? formatPrice(product.priceBrlCents, 'BRL')
+      : formatPrice(product.priceCents, product.currency);
+
+  const methods: Array<{ id: Method; title: string; text: string; price: string }> = [
+    ...(product.priceBrlCents
+      ? [{ id: 'brl' as const, title: 'Pagar em reais', text: 'Pix, boleto ou cartão de crédito nacional', price: formatPrice(product.priceBrlCents, 'BRL') }]
+      : []),
+    { id: 'usd', title: 'Pagar em dólar', text: 'Cartão de crédito internacional', price: formatPrice(product.priceCents, product.currency) }
+  ];
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8 lg:py-16">
@@ -58,13 +68,34 @@ function CheckoutContent() {
           <p className="text-xs font-extrabold uppercase tracking-[0.2em] text-[#36A5B4]">Checkout seguro</p>
           <h1 className="mt-3 font-display text-3xl font-bold tracking-[-.05em] sm:text-4xl">Finalize sua compra.</h1>
           <p className="mt-4 text-sm leading-6 text-[#718096]">
-            Você será direcionado à página de pagamento segura do Stripe. Os dados do cartão são digitados diretamente no Stripe e nunca passam pelos nossos servidores.
+            Escolha a forma de pagamento. Você será direcionado a uma página de pagamento segura — os dados do cartão nunca passam pelos nossos servidores.
           </p>
 
-          <div className="mt-8 grid gap-3">
+          <fieldset className="mt-8">
+            <legend className="sr-only">Forma de pagamento</legend>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {methods.map((option) => {
+                const selected = activeMethod === option.id;
+                return (
+                  <label
+                    key={option.id}
+                    className={`flex cursor-pointer items-start gap-4 rounded-2xl border bg-white p-5 transition ${selected ? 'border-[#1A202C] ring-2 ring-[#1A202C]/10' : 'border-black/10 hover:border-black/25'}`}
+                  >
+                    <input type="radio" name="method" value={option.id} checked={selected} onChange={() => setMethod(option.id)} className="mt-1 accent-[#1A202C]" />
+                    <span className="min-w-0 flex-1">
+                      <strong className="block text-sm">{option.title}</strong>
+                      <small className="mt-1 block text-xs text-[#718096]">{option.text}</small>
+                      <span className="mt-2 block font-display text-lg font-bold" data-no-translate>{option.price}</span>
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+          </fieldset>
+
+          <div className="mt-6 grid gap-3">
             {[
-              ['Cartão de crédito internacional', 'Visa, Mastercard, American Express e outros'],
-              ['Confirmação automática', 'A licença (Product Key) aparece em "Minhas compras" após a aprovação'],
+              ['Confirmação automática', 'A licença (Product Key) aparece em "Minhas compras" assim que o pagamento é aprovado'],
               ['Conta necessária', 'Se ainda não estiver conectado, pediremos seu login antes do pagamento']
             ].map(([title, text]) => (
               <div key={title} className="flex items-start gap-4 rounded-2xl border border-black/10 bg-white p-5">
@@ -75,11 +106,15 @@ function CheckoutContent() {
           </div>
 
           <div className="mt-8">
-            <CheckoutButton
-              productSlug={product.slug}
-              label="Pagar com segurança"
-              className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#1A202C] px-6 text-sm font-bold text-white transition hover:bg-[#2D3748] disabled:cursor-wait disabled:opacity-60 sm:w-auto"
-            />
+            {activeMethod === 'brl' ? (
+              <AsaasCheckoutForm productSlug={product.slug} />
+            ) : (
+              <CheckoutButton
+                productSlug={product.slug}
+                label="Pagar com cartão internacional"
+                className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#1A202C] px-6 text-sm font-bold text-white transition hover:bg-[#2D3748] disabled:cursor-wait disabled:opacity-60 sm:w-auto"
+              />
+            )}
           </div>
           <p className="mt-4 text-xs leading-5 text-[#A0AEC0]">
             Ao continuar, você concorda com os <Link href="/termos-de-uso" className="underline">termos de uso</Link>, a <Link href="/politica-de-privacidade" className="underline">política de privacidade</Link> e a <Link href="/politica-de-compra" className="underline">política de compra</Link>.
@@ -99,7 +134,7 @@ function CheckoutContent() {
             <div className="mt-3 flex items-center justify-between text-sm text-[#CBD5E0]"><span>Entrega digital</span><span className="text-[#9AE6B4]">Incluída</span></div>
           </div>
           <div className="flex items-end justify-between border-t border-white/10 pt-5"><span className="text-sm text-[#CBD5E0]">Total</span><span className="font-display text-3xl font-bold" data-no-translate>{price}</span></div>
-          <p className="mt-6 flex items-center gap-2 text-[11px] text-[#A0AEC0]"><LockKeyhole size={14} className="text-[#9AE6B4]" /> Pagamento processado pelo Stripe</p>
+          <p className="mt-6 flex items-center gap-2 text-[11px] text-[#A0AEC0]"><LockKeyhole size={14} className="text-[#9AE6B4]" /> Pagamento processado pelo {activeMethod === 'brl' ? 'Asaas' : 'Stripe'}</p>
         </aside>
       </div>
 

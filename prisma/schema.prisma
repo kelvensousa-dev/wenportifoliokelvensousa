@@ -40,6 +40,10 @@ model User {
   emailVerifiedAt DateTime?
   productKeys  ProductKey[]
   abandonedCarts AbandonedCart[]
+  /// CPF ou CNPJ (so digitos). Exigido pelo Asaas para cobrar em reais.
+  cpfCnpj         String?
+  /// ID do cliente no Asaas (cus_...). Criado na primeira compra em reais.
+  asaasCustomerId String?   @unique
 }
 
 model RefreshToken {
@@ -60,6 +64,9 @@ model Product {
   category    ProductCategory
   priceCents  Int
   currency    String          @default("USD")
+  /// Preco em reais (centavos) para Pix/boleto/cartao BR via Asaas.
+  /// Nulo = produto ainda nao vendido em reais.
+  priceBrlCents Int?
   demoUrl     String?
   featured    Boolean         @default(false)
   active      Boolean         @default(true)
@@ -92,6 +99,8 @@ model Order {
   currency    String      @default("USD")
   provider    String?
   providerId  String?
+  /// Pagina de pagamento hospedada (fatura do Asaas), para retomar o pagamento.
+  paymentUrl  String?
   items       OrderItem[]
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
@@ -210,4 +219,14 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+/// Eventos de webhook ja processados (idempotencia).
+/// O Asaas entrega "at least once": o mesmo evento pode chegar mais de uma vez.
+model WebhookEvent {
+  id        String   @id
+  provider  String
+  type      String
+  createdAt DateTime @default(now())
+  @@index([createdAt])
 }
