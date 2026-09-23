@@ -25,15 +25,17 @@ async function main() {
       priceCents: item.priceCents,
       currency: item.currency,
       priceBrlCents: item.priceBrlCents ?? null,
-      featured: Boolean(item.bestSeller),
-      active: true
+      featured: Boolean(item.bestSeller)
     };
+    // `active` so e definido na CRIACAO. Depois disso quem manda e o admin
+    // (/admin/produtos): um deploy nao pode recolocar a venda um produto retirado.
     const product = await prisma.product.upsert({
       where: { slug: item.slug },
       update: data,
-      create: { id: item.slug, slug: item.slug, ...data }
+      create: { id: item.slug, slug: item.slug, ...data, active: true }
     });
-    console.log(`  ok: ${product.name} (${product.priceCents / 100} ${product.currency})`);
+    const brl = product.priceBrlCents ? ` / ${product.priceBrlCents / 100} BRL` : '';
+    console.log(`  ok: ${product.name} (${product.priceCents / 100} USD${brl}) ${product.active ? 'ATIVO' : 'retirado'}`);
   }
 
   const { count } = await prisma.product.updateMany({

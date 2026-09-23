@@ -5,7 +5,8 @@ import { z } from 'zod';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { rateLimit } from '@/lib/rate-limit';
-import { AsaasError, createCustomer, createPayment, isAsaasConfigured, updateCustomer } from '@/lib/asaas';
+import { AsaasError, createCustomer, createPayment, getPayment, isAsaasConfigured, PAID_STATUSES, toCents, updateCustomer } from '@/lib/asaas';
+import { cancelPendingOrder, fulfillOrder } from '@/modules/billing/fulfillment';
 import { isValidCpfCnpj, onlyDigits } from '@/lib/cpf-cnpj';
 
 export const runtime = 'nodejs';
@@ -93,8 +94,23 @@ export async function POST(req: Request) {
       },
       orderBy: { createdAt: 'desc' }
     });
-    if (openOrder?.paymentUrl && cpfCnpj === user.cpfCnpj) {
-      return NextResponse.json({ url: openOrder.paymentUrl });
+    if (openOrder?.paymentUrl && openOrder.providerId && cpfCnpj === user.cpfCnpj) {
+      // Antes de reaproveitar, confirma no Asaas que a cobranca ainda esta em aberto.
+      // (Se o webhook atrasou ou nao chegou, a fatura pode ja estar paga.)
+      const current = await getPayment(openOrder.providerId).catch(() => null);
+      if (current && !current.deleted && (current.status === 'PENDING' || current.status === 'OVERDUE')) {
+        return NextResponse.json({ url: openOrder.paymentUrl });
+      }
+      if (current && PAID_STATUSES.has(current.status)) {
+        // Pagamento confirmado sem aviso do webhook: libera a licenca agora.
+        // Leva o cliente a "Minhas compras" em vez de cobrar de novo.
+        await fulfillOrder({ orderId: openOrder.id, provider: 'asaas', providerId: current.id, paidCents: toCents(current.value) });
+        return NextResponse.json({ url: `${appUrl()}/dashboard/notificacoes` });
+      } else if (current) {
+        // Cobranca removida, estornada etc.: o pedido antigo nao vale mais.
+        await cancelPendingOrder(openOrder.id);
+      }
+      // Cobranca inexistente/cancelada: segue o fluxo e cria uma nova.
     }
 
     // 1. Cliente no Asaas (criado uma vez e reaproveitado).

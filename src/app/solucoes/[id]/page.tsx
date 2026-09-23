@@ -3,22 +3,22 @@ import { ArrowLeft, ArrowRight, Check, Flame, ShieldCheck, Sparkles } from 'luci
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import PublicShell from '@/components/PublicShell';
-import { catalog, findProduct, formatPrice } from '@/lib/products';
+import { getActiveProduct } from '@/lib/catalog-server';
+import { formatPrice } from '@/lib/products';
 
 type SolutionPageProps = { params: { id: string } };
 
-export function generateStaticParams() {
-  return catalog.map((product) => ({ id: product.slug }));
-}
+// Produto retirado no admin some na hora (404), por isso a pagina nao e estatica.
+export const dynamic = 'force-dynamic';
 
-export function generateMetadata({ params }: SolutionPageProps): Metadata {
-  const product = findProduct(params.id);
+export async function generateMetadata({ params }: SolutionPageProps): Promise<Metadata> {
+  const product = await getActiveProduct(params.id);
   if (!product) return { title: 'Solução não encontrada' };
   return { title: product.name, description: product.summary };
 }
 
-export default function SolutionPage({ params }: SolutionPageProps) {
-  const product = findProduct(params.id);
+export default async function SolutionPage({ params }: SolutionPageProps) {
+  const product = await getActiveProduct(params.id);
   if (!product) notFound();
 
   // Antes: "Comprar solucao" ia para /checkout sem informar o produto, e o
