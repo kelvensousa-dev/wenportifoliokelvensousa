@@ -6,19 +6,22 @@ import PublicShell from '@/components/PublicShell';
 import { getActiveProduct } from '@/lib/catalog-server';
 import { formatPrice } from '@/lib/products';
 
-type SolutionPageProps = { params: { id: string } };
+// Next 15+: `params` chega como Promise.
+type SolutionPageProps = { params: Promise<{ id: string }> };
 
 // Produto retirado no admin some na hora (404), por isso a pagina nao e estatica.
 export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({ params }: SolutionPageProps): Promise<Metadata> {
-  const product = await getActiveProduct(params.id);
+  const { id } = await params;
+  const product = await getActiveProduct(id);
   if (!product) return { title: 'Solução não encontrada' };
   return { title: product.name, description: product.summary };
 }
 
 export default async function SolutionPage({ params }: SolutionPageProps) {
-  const product = await getActiveProduct(params.id);
+  const { id } = await params;
+  const product = await getActiveProduct(id);
   if (!product) notFound();
 
   // Antes: "Comprar solucao" ia para /checkout sem informar o produto, e o

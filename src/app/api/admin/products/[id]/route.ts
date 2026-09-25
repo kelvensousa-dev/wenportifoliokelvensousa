@@ -14,7 +14,8 @@ const bodySchema = z.object({ active: z.boolean() });
  * Nao existe "excluir" de verdade: um produto com pedidos precisa continuar no
  * banco para o historico de compras e as licencas dos clientes.
  */
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   // Admin com 2FA ativo, conferido no banco.
   const admin = await getAdminForApi();
   if (!admin) return NextResponse.json({ message: 'Acesso negado.' }, { status: 403 });
@@ -22,7 +23,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   const parsed = bodySchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ message: 'Dados inválidos.' }, { status: 400 });
 
-  const { count } = await prisma.product.updateMany({ where: { id: params.id }, data: { active: parsed.data.active } });
+  const { count } = await prisma.product.updateMany({ where: { id }, data: { active: parsed.data.active } });
   if (count === 0) return NextResponse.json({ message: 'Produto não encontrado.' }, { status: 404 });
 
   return NextResponse.json({ ok: true, active: parsed.data.active });
