@@ -12,7 +12,16 @@ export type MenuLink = { href: string; label: string; external?: boolean };
  * sem nenhuma acao: no celular nao havia como chegar ao login, ao contato
  * nem ao portfolio.
  */
-export default function MobileMenu({ links, breakpoint = 'md' }: { links: MenuLink[]; breakpoint?: 'md' | 'lg' | 'xl' }) {
+export default function MobileMenu({
+  links,
+  breakpoint = 'md',
+  tone = 'light'
+}: {
+  links: MenuLink[];
+  breakpoint?: 'md' | 'lg' | 'xl';
+  /** `dark` adapta o botao do menu para fundos escuros (home). */
+  tone?: 'light' | 'dark';
+}) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
@@ -39,7 +48,7 @@ export default function MobileMenu({ links, breakpoint = 'md' }: { links: MenuLi
         aria-label={open ? 'Fechar menu' : 'Abrir menu'}
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
-        className={`rounded-full border border-black/10 bg-white p-2.5 ${hiddenAt}`}
+        className={`rounded-full border p-2.5 ${tone === 'dark' ? 'border-studio-edge bg-studio-surface text-studio-text' : 'border-black/10 bg-white'} ${hiddenAt}`}
       >
         {open ? <X size={18} /> : <Menu size={18} />}
       </button>

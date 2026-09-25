@@ -12,7 +12,8 @@ const languages: Language[] = [
   { code: 'en-US', label: 'EN', nativeLabel: 'English (US)' }
 ];
 
-export default function LanguageSelector() {
+/** `tone="dark"` adapta o botao para fundos escuros (home). */
+export default function LanguageSelector({ tone = 'light' }: { tone?: 'light' | 'dark' }) {
   const { language, setLanguage, translate } = useLanguage();
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -43,7 +44,9 @@ export default function LanguageSelector() {
         aria-expanded={open}
         aria-label={translate('selectLanguage')}
         onClick={() => setOpen((value) => !value)}
-        className="inline-flex min-h-10 items-center gap-1 rounded-full border border-black/10 bg-white px-2.5 py-2 text-xs font-bold transition hover:border-[#36B7C9] sm:px-3"
+        className={`inline-flex min-h-10 items-center gap-1 rounded-full border px-2.5 py-2 text-xs font-bold transition sm:px-3 ${
+          tone === 'dark' ? 'border-studio-edge bg-studio-surface text-studio-text hover:border-studio-amber' : 'border-black/10 bg-white hover:border-[#36B7C9]'
+        }`}
       >
         <Globe2 size={14} /> {selectedLanguage.label}
         <ChevronDown size={13} className={open ? 'rotate-180 transition' : 'transition'} />

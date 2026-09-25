@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Manrope, Space_Grotesk } from 'next/font/google';
+import { Bricolage_Grotesque, JetBrains_Mono, Manrope, Space_Grotesk } from 'next/font/google';
 import { LanguageProvider } from '@/components/LanguageContext';
 import Providers from '@/components/Providers';
 import './globals.css';
@@ -12,6 +12,9 @@ import './globals.css';
  */
 const manrope = Manrope({ subsets: ['latin'], variable: '--font-manrope', display: 'swap' });
 const spaceGrotesk = Space_Grotesk({ subsets: ['latin'], variable: '--font-space-grotesk', display: 'swap' });
+// Fontes da identidade visual da home (titulos e rotulos tecnicos).
+const bricolage = Bricolage_Grotesque({ subsets: ['latin'], variable: '--font-bricolage', display: 'swap' });
+const jetbrains = JetBrains_Mono({ subsets: ['latin'], weight: ['500'], variable: '--font-jetbrains', display: 'swap' });
 
 const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
 
@@ -40,7 +43,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="pt-BR" className={`${manrope.variable} ${spaceGrotesk.variable}`}>
+    <html lang="pt-BR" className={`${manrope.variable} ${spaceGrotesk.variable} ${bricolage.variable} ${jetbrains.variable}`}>
       <body className="font-sans antialiased">
         <Providers>
           <LanguageProvider>{children}</LanguageProvider>
